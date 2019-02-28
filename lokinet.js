@@ -468,7 +468,7 @@ function launchLokinet(config, cb) {
       console.log('stdout', stdout)
       if (stdout == '') {
         if (process.getgid() != 0) {
-          conole.log(config.binary_location, 'does not have setcap')
+          console.log(config.binary_location, 'does not have setcap')
           process.exit()
         } else {
           // are root

@@ -118,7 +118,7 @@ then
 
 # Software the launcher manages
 
-- [lokid](https://github.com/loki-project/loki)
+- [lokid](https://github.com/loki-project/loki-core)
 - [lokinet](https://github.com/loki-project/loki-network)
 - [loki-storage](https://github.com/loki-project/loki-storage-server)
 
@@ -138,4 +138,6 @@ And if you don't have the dependencies to build from source check out [contrib/d
 
 Changelog items are now [available here](https://github.com/loki-project/loki-launcher/releases)
 
-For more indepth details, be sure to check out our weekly [dev reports](https://loki.network/blog/)
+# Donations
+
+LVYAAirCt19PXLfA3ovvUnWq81oESv2iZXrbHUgW19Ff73aZSiZ6ZodSrukMrvVwUxGLyJed3su1YBXUZjww6SScS4z5xnj

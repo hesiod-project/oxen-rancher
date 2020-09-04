@@ -1482,6 +1482,9 @@ function handleInput(line) {
         storageLogging = true
       }
     }
+    if (line.match(/^prepare_registration/) {
+      inPrepareReg = true
+    }
     return true
   }
   // FIXME: it'd be nice to disable the periodic status report msgs in interactive too
@@ -1526,9 +1529,6 @@ function startLokid(config, args) {
         if (loki_daemon) {
           loki_daemon.stdin.write(key)
         }
-      }
-      if (key === 'prepare_registration\n') {
-        inPrepareReg = true
       }
       if (key === 'exit\n') {
         console.log('detected exit')

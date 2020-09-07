@@ -1491,7 +1491,7 @@ function handleInput(line) {
         storageLogging = true
       }
     }
-    if (line.match(/^prepare_registration/) {
+    if (line.match(/^prepare_registration/)) {
       inPrepareReg = true
     }
     return true

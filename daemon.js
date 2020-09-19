@@ -146,9 +146,11 @@ function shutdown_everything() {
       }
       if (loki_daemon) {
         if (loki_daemon.outputFlushTimer) {
-          console.log('Should never hit me')
-          // clearInterval(loki_daemon.outputFlushTimer)
-          // loki_daemon.outputFlushTimer = null
+          // it can and does, if shutdown is called before lokid exits...
+          // sig handler?
+          //console.log('Should never hit me')
+          clearInterval(loki_daemon.outputFlushTimer)
+          loki_daemon.outputFlushTimer = null
         }
       }
       if (blockchain_running()) {
@@ -634,6 +636,7 @@ function startStorageServer(config, args, cb) {
   }
 
   checkRpcUp(function() {
+    //console.log('checkRpcUp cb')
     config.storage.ip = '0.0.0.0';
     if (config.network.enabled) {
       lib.savePids(config, args, loki_daemon, lokinet, storageServer)
@@ -670,6 +673,7 @@ function startStorageServer(config, args, cb) {
 }
 
 function startLokinet(config, args, cb) {
+  //console.log('DAEMON: startLokinet')
   // we no longer need to wait for LokiKey before starting network/storage
   // waitForLokiKey(config, timeout, start, cb)
   if (configUtil.isBlockchainBinary3X(config) || configUtil.isBlockchainBinary4Xor5X(config)) {
@@ -1540,10 +1544,10 @@ function startLokid(config, args) {
         }
       }
       if (key === 'exit\n') {
-        console.log('detected exit')
+        //console.log('detected exit')
         // can't do this, this will prevent loki_daemon exit
         // from shuttingdown everything
-        // shuttingDown = true
+        //shuttingDown = true
         exitRequested = true
       }
     })

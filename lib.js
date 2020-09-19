@@ -1227,6 +1227,7 @@ function httpPost(url, postdata, options, cb) {
       }
       clearInterval(watchdog)
       //console.log('err', err)
+      abort = true // because we can get a parse error and then get a response...
       if (cb) cb()
       else
         reject()

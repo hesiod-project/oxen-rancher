@@ -9,6 +9,8 @@ const http = require('http')
 const https = require('https')
 const urlparser = require('url')
 const { spawn, exec, execSync } = require('child_process')
+const lib = require('./lib.js')
+const configUtil = require('./config.js')
 
 // FIXME: disable rpc if desired
 const VERSION = 0.9
@@ -916,6 +918,144 @@ function generateSerivceNodeINI(config, cb) {
   generateINI(config, done, markDone, cb)
 }
 
+function generateSerivceNodeINI8(config, cb) {
+  const homeDir = os.homedir()
+  var done = {
+    bootstrap: false,
+    upstream: false,
+    rpcCheck: false,
+    dnsBind: false,
+    netIf: false,
+    publicIP: false,
+  }
+  if (config.publicIP) {
+    done.publicIP = undefined
+  }
+  genSnCallbackFired = false
+  function markDone(completeProcess, params) {
+    done[completeProcess] = true
+    let ready = true
+    for (var i in done) {
+      if (!done[i]) {
+        ready = false
+        log(i, 'is not ready')
+        break
+      }
+    }
+    if (shuttingDown) {
+      //if (cb) cb()
+      log('not going to start lokinet, shutting down')
+      return
+    }
+    if (!ready) return
+    // we may have un-required proceses call markDone after we started
+    if (genSnCallbackFired) return
+    genSnCallbackFired = true
+    /*
+    var keyPath = homeDir + '/.loki/'
+    //
+    if (config.lokid && config.lokid.data_dir) {
+      keyPath = config.lokid.data_dir
+      // make sure it has a trailing slash
+      if (keyPath[keyPath.length - 1] != '/') {
+        keyPath += '/'
+      }
+    }
+    if (config.lokid &&
+         (config.lokid.network == "test" || config.lokid.network == "demo")) {
+      keyPath += 'testnet/'
+    }
+    keyPath += 'key'
+    */
+    log('markDone params', JSON.stringify(params))
+    log('PUBLIC', params.publicIP, 'IFACE', params.interfaceIP)
+    var useNAT = false
+    if (params.publicIP != params.interfaceIP) {
+      log('NAT DETECTED MAKE SURE YOU FORWARD UDP PORT', config.public_port, 'on', params.publicIP, 'to', params.interfaceIP)
+      useNAT = true
+    }
+    log('Drafting lokinet service node config')
+    runningConfig = {
+      router: {
+        "data-dir": config.data_dir,
+      },
+      dns: {
+        upstream: params.upstreamDNS_servers,
+        bind: params.lokinet_free53Ip + ':53',
+      },
+      logging: {
+        level: 'info',
+      }, /*
+      metrics: {
+        json-metrics-path:
+      }, */
+      netdb: {
+      },
+      bind: {
+        // will be set after
+      },
+      network: {
+        //profiling: false,
+        exit: false
+      },
+      api: {
+        enabled: true,
+        bind: config.rpc_ip + ':' + params.use_lokinet_rpc_port
+      },
+      system: {
+      }
+    }
+    if (config.lokid) {
+      runningConfig.lokid = {
+        enabled: true,
+        //jsonrpc: config.lokid.rpc_ip + ':' + config.lokid.rpc_port,
+        //rpc: 'tcp://' + config.lokid.rpc_ip + ':' + config.lokid.zmq_port,
+        rpc: config.lokid.zmq_socket,
+        //username: config.lokid.rpc_user,
+        //password: config.lokid.rpc_pass,
+        //'service-node-seed': keyPath
+      }
+      if (config.lokid.rpc_user) {
+        runningConfig.lokid.username = config.lokid.rpc_user
+        runningConfig.lokid.password = config.lokid.rpc_pass
+      }
+    }
+    if (useNAT) {
+      runningConfig.router['public-ip'] = params.publicIP
+      runningConfig.router['public-port'] = config.public_port
+    }
+    // NAT is only used for routers...
+    // inject manual NAT config?
+    if (config.public_ip) {
+      runningConfig.router['public-ip'] = config.public_ip
+      runningConfig.router['public-port'] = config.public_port
+    }
+    if (config.forceNatOff) {
+      delete runningConfig.router['public-ip']
+      delete runningConfig.router['public-port']
+    }
+    runningConfig.bind[params.lokinet_nic] = config.public_port
+    if (config.internal_port) {
+      runningConfig.bind[params.lokinet_nic] = config.internal_port
+    }
+    applyConfig(config, runningConfig)
+    // not in seedMode, make sure we have some way to bootstrap
+    if (!config.seedMode && !runningConfig.bootstrap && !runningConfig.connect) {
+      console.error()
+      console.error('NETWORK: ERROR! No bootstrap or connects and not in seedMode')
+      console.error()
+      // should this be shutdown_everything?
+      process.exit(1)
+    }
+
+    // doesn't work
+    //runningConfig.network['type'] = 'null' // disable exit
+    //runningConfig.network['enabled'] = true
+    cb(ini.jsonToINI(runningConfig))
+  }
+  generateINI(config, done, markDone, cb)
+}
+
 var genClientCallbackFired
 function generateClientINI(config, cb) {
   var done = {
@@ -1111,7 +1251,7 @@ function launchLokinet(config, instance, cb) {
         // restart it in 30 seconds to avoid pegging the cpu
         instance.restarts++
         setTimeout(function () {
-          log('shutdown has not been requested, restarting lokinet, there has been', instance.restart, 'restart(s)')
+          log('shutdown has not been requested, restarting lokinet, there has been', instance.restarts, 'restart(s)')
           launchLokinet(config, instance)
         }, 30 * 1000)
       } else {
@@ -1238,10 +1378,38 @@ function waitForUrl(url, cb) {
   })
 }
 
+function waitForLokidUrl(url, cb) {
+  // console.log('lokinet.js - waiting for', url)
+  lib.httpPost(url, '{}', function (data) {
+    // will be undefined if down (ECONNREFUSED)
+    // if success
+    // <html><head><title>Unauthorized Access</title></head><body><h1>401 Unauthorized</h1></body></html>
+    if (data) {
+      // console.log(url, 'is active')
+      return cb()
+    }
+    // no data could me 404
+    if (shuttingDown) {
+      //if (cb) cb()
+      log('not going to start lokinet, shutting down')
+      return
+    }
+    setTimeout(function () {
+      waitForLokidUrl(url, cb)
+    }, 1000)
+  })
+}
+
 function startServiceNode(config, cb) {
   var networkConfig = config.network;
   checkConfig(networkConfig)
-  networkConfig.ini_writer = generateSerivceNodeINI
+  var version = lib.getNetworkVersion(config)
+  if (version.match('lokinet-0.8.')) {
+    console.log('Detected Lokinet-8.x')
+    networkConfig.ini_writer = generateSerivceNodeINI8
+  } else {
+    networkConfig.ini_writer = generateSerivceNodeINI
+  }
   networkConfig.restart = true
   // FIXME: check for bootstrap stomp and strip it
   // only us lokinet devs will need to make our own seed node
@@ -1262,7 +1430,9 @@ function startServiceNode(config, cb) {
     }
     url += networkConfig.lokid.rpc_ip+':'+networkConfig.lokid.rpc_port+'/json_rpc'
     log('lokinet waiting for lokid RPC server')
-    waitForUrl(url, function () {
+
+    // 8.x requires a POST and post works with older versions
+    waitForLokidUrl(url, function () {
       launchLokinet(config, { restarts: 0 }, cb)
     })
   })

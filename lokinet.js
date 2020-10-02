@@ -988,26 +988,28 @@ function generateSerivceNodeINI8(config, cb) {
       }, /*
       metrics: {
         json-metrics-path:
-      }, */
-      netdb: {
       },
+      netdb: {
+      }, */
       bind: {
         // will be set after
       },
+      /*
       network: {
         //profiling: false,
-        exit: false
+        //exit: false
       },
+      */
       api: {
-        enabled: true,
-        bind: config.rpc_ip + ':' + params.use_lokinet_rpc_port
+        enabled: 1,
+        bind: 'tcp://' + config.rpc_ip + ':' + params.use_lokinet_rpc_port
       },
       system: {
       }
     }
     if (config.lokid) {
       runningConfig.lokid = {
-        enabled: true,
+        enabled: 1,
         //jsonrpc: config.lokid.rpc_ip + ':' + config.lokid.rpc_port,
         //rpc: 'tcp://' + config.lokid.rpc_ip + ':' + config.lokid.zmq_port,
         rpc: config.lokid.zmq_socket,
@@ -1021,19 +1023,21 @@ function generateSerivceNodeINI8(config, cb) {
       }
     }
     if (useNAT) {
-      runningConfig.router['public-ip'] = params.publicIP
+      runningConfig.router['public-address'] = params.publicIP
       runningConfig.router['public-port'] = config.public_port
     }
     // NAT is only used for routers...
     // inject manual NAT config?
     if (config.public_ip) {
-      runningConfig.router['public-ip'] = config.public_ip
+      runningConfig.router['public-address'] = config.public_ip
       runningConfig.router['public-port'] = config.public_port
     }
     if (config.forceNatOff) {
-      delete runningConfig.router['public-ip']
+      delete runningConfig.router['public-address']
       delete runningConfig.router['public-port']
     }
+    // we could just leave this blank
+    // it defaults to *=0
     runningConfig.bind[params.lokinet_nic] = config.public_port
     if (config.internal_port) {
       runningConfig.bind[params.lokinet_nic] = config.internal_port

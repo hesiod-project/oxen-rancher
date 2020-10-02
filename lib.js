@@ -134,9 +134,12 @@ function getStorageVersion(config) {
       const storage_version = stdout.toString().trim()
       const lines = storage_version.split(/\n/)
       //console.log('storage_version', storage_version)
+      //console.log('storage_version', lines.length, lines)
+      // 2.0.7 uses 3 instead of 6...
+      let useLine = lines.length === 3 ? 0 : 3;
       // [2020-03-12 07:53:16.940] [info] [print_version] Loki Storage Server v1.0.10
-      if (lines[3].match(/Loki Storage Server v/)) {
-        storageVersion = lines[3].replace(' [info] [print_version]', '')
+      if (lines[useLine].match(/Loki Storage Server v/)) {
+        storageVersion = lines[useLine].replace(' [info] [print_version]', '')
         return storageVersion
       }
       return storage_version
@@ -1227,6 +1230,7 @@ function httpPost(url, postdata, options, cb) {
       }
       clearInterval(watchdog)
       //console.log('err', err)
+      abort = true // because we can get a parse error and then get a response...
       if (cb) cb()
       else
         reject()

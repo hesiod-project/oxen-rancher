@@ -507,6 +507,23 @@ function checkBlockchainConfig(config) {
     }
   }
 
+  // 8.x requires this now
+  //ipc:///root/.loki/testnet/lokid.sock
+  config.blockchain.zmq_socket = 'ipc://' + getLokiDataDir(config) + '/lokid.sock'
+  /*
+  if (config.blockchain.zmq_port === undefined || config.blockchain.zmq_port === '0') {
+    if (config.blockchain.network == 'test') {
+      config.blockchain.zmq_port = 38160
+    } else
+    if (config.blockchain.network == 'staging') {
+      //config.blockchain.zmq_port = 38059
+    } else {
+      //config.blockchain.zmq_port = 22025
+    }
+  }
+  */
+
+
   // actualize rpc_ip so we can pass it around to other daemons
   if (config.blockchain.rpc_ip === undefined) {
     config.blockchain.rpc_ip = '127.0.0.1'

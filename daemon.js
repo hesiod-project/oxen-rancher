@@ -146,9 +146,11 @@ function shutdown_everything() {
       }
       if (loki_daemon) {
         if (loki_daemon.outputFlushTimer) {
-          console.log('Should never hit me')
-          // clearInterval(loki_daemon.outputFlushTimer)
-          // loki_daemon.outputFlushTimer = null
+          // it can and does, if shutdown is called before lokid exits...
+          // sig handler?
+          //console.log('Should never hit me')
+          clearInterval(loki_daemon.outputFlushTimer)
+          loki_daemon.outputFlushTimer = null
         }
       }
       if (blockchain_running()) {
@@ -634,6 +636,7 @@ function startStorageServer(config, args, cb) {
   }
 
   checkRpcUp(function() {
+    //console.log('checkRpcUp cb')
     config.storage.ip = '0.0.0.0';
     if (config.network.enabled) {
       lib.savePids(config, args, loki_daemon, lokinet, storageServer)
@@ -670,6 +673,7 @@ function startStorageServer(config, args, cb) {
 }
 
 function startLokinet(config, args, cb) {
+  //console.log('DAEMON: startLokinet')
   // we no longer need to wait for LokiKey before starting network/storage
   // waitForLokiKey(config, timeout, start, cb)
   if (configUtil.isBlockchainBinary3X(config) || configUtil.isBlockchainBinary4Xor5X(config)) {
@@ -1183,6 +1187,7 @@ function configureLokid(config, args) {
 }
 
 var loki_daemon
+var inPrepareReg = false
 var savePidConfig = {}
 function launchLokid(binary_path, lokid_options, interactive, config, args, cb) {
   if (shuttingDown) {
@@ -1299,6 +1304,10 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
         clearTimeout(loki_daemon.outputFlushTimer)
         loki_daemon.outputFlushTimer = undefined
       }
+      if (loki_daemon.getHeightTimer) {
+        clearTimeout(loki_daemon.getHeightTimer)
+        loki_daemon.getHeightTimer = undefined
+      }
     }
     if (!shuttingDown) {
       // if we need to restart
@@ -1322,14 +1331,59 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       console.log('BLOCKCHAIN: flushOutput lost handle, stopping flushing.')
       return
     }
-    // FIXME turn off when in prepare status...
-    loki_daemon.stdin.write("\n")
+    // turn off when in prepare status...
+    if (!inPrepareReg) {
+      loki_daemon.stdin.write("\n")
+    }
     // schedule next flush
     loki_daemon.outputFlushTimer = setTimeout(flushOutput, 1000)
   }
   // disable until we can detect prepare_reg
   // don't want to accidentally launch with prepare_reg broken
-  //loki_daemon.outputFlushTimer = setTimeout(flushOutput, 1000)
+  loki_daemon.outputFlushTimer = setTimeout(flushOutput, 1000)
+
+  loki_daemon.getHeightTimer = null
+  loki_daemon.lastHeight = 0
+  loki_daemon.heightStuckCounter = 0
+  async function getHeight() {
+    //console.log('daemon::getHeight - asking')
+    const info = await lib.blockchainRpcGetNetInfo(config)
+    //console.log('daemon::getHeight - info', info)
+    //if (info.result.height < info.result.target_height) // syncing...
+    // but it could be stuck syncing, right?
+    if (!loki_daemon) {
+      console.log('LAUNCHER: loki_daemon went away, stopping height check')
+      return
+    }
+    if (info && info.result) {
+      //console.log('daemon::getHeight - height', info.result.height)
+      //console.log('daemon::getHeight - target_height', info.result.target_height)
+      if (loki_daemon.lastHeight) {
+        if (loki_daemon.lastHeight === info.result.height) {
+          loki_daemon.heightStuckCounter++;
+          console.log('LAUNCHER: blockchain seems to be stuck at', info.result.height, 'for', loki_daemon.heightStuckCounter, 'tests now')
+          // 40 mins of being stuck
+          if (loki_daemon.heightStuckCounter > 10) {
+            console.log('LAUNCHER: detected stuck blockchain, restarting')
+            requestBlockchainRestart(config)
+            return
+          }
+        } else {
+          // reset if any movement
+          loki_daemon.heightStuckCounter = 0
+        }
+      }
+      loki_daemon.lastHeight = info.result.height
+    }
+    loki_daemon.getHeightTimer = setTimeout( () => {
+      getHeight()
+    }, 2 * 2 * 60 * 1000)
+  }
+
+  // give it a minute to start up
+  loki_daemon.getHeightTimer = setTimeout( () => {
+    getHeight()
+  }, 60 * 1000)
 
   if (cb) cb()
 }
@@ -1441,6 +1495,9 @@ function handleInput(line) {
         storageLogging = true
       }
     }
+    if (line.match(/^prepare_registration/)) {
+      inPrepareReg = true
+    }
     return true
   }
   // FIXME: it'd be nice to disable the periodic status report msgs in interactive too
@@ -1487,10 +1544,10 @@ function startLokid(config, args) {
         }
       }
       if (key === 'exit\n') {
-        console.log('detected exit')
+        //console.log('detected exit')
         // can't do this, this will prevent loki_daemon exit
         // from shuttingdown everything
-        // shuttingDown = true
+        //shuttingDown = true
         exitRequested = true
       }
     })

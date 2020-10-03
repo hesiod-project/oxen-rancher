@@ -276,14 +276,14 @@ async function downloadGithubRepo(github_url, options, config, curVerStr, cb) {
     for(var i in data.assets) {
       var asset = data.assets[i]
       //console.log(i, 'asset', asset.browser_download_url)
-      if (search == 'linux' && asset.browser_download_url.match(searchRE) && asset.browser_download_url.match(/\.tar.xz/i) && asset.browser_download_url.match(/-x64-/i)) {
+      if (search == 'linux' && asset.browser_download_url.match(searchRE) && asset.browser_download_url.match(/\.tar.xz/i) && (asset.browser_download_url.match(/-x64-/i) || asset.browser_download_url.match(/-x86_64-/i) || asset.browser_download_url.match(/-amd64-/i) )) {
         // linux
         options.ext = '.tar.xz'
         downloadArchive(asset.browser_download_url, config, options)
         found = true
       }
       // storage server support
-      if (search == 'osx' && asset.browser_download_url.match(searchRE) && asset.browser_download_url.match(/\.tar.xz/i) && asset.browser_download_url.match(/-x64-/i)) {
+      if (search == 'osx' && asset.browser_download_url.match(searchRE) && asset.browser_download_url.match(/\.tar.xz/i) && (asset.browser_download_url.match(/-x64-/i) || asset.browser_download_url.match(/-x86_64-/i)  || asset.browser_download_url.match(/-amd64-/i) )) {
         // MacOS
         if (!found) {
           options.ext = '.tar.xz'
@@ -291,7 +291,7 @@ async function downloadGithubRepo(github_url, options, config, curVerStr, cb) {
           found = true
         }
       } else
-      if (search == 'osx' && asset.browser_download_url.match(searchRE) && asset.browser_download_url.match(/\.zip/i) && asset.browser_download_url.match(/-x64-/i)) {
+      if (search == 'osx' && asset.browser_download_url.match(searchRE) && asset.browser_download_url.match(/\.zip/i) && (asset.browser_download_url.match(/-x64-/i) || asset.browser_download_url.match(/-x86_64-/i)  || asset.browser_download_url.match(/-amd64-/i) )) {
         // MacOS
         if (!found) {
           options.ext = '.zip'

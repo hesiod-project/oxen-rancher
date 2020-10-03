@@ -171,6 +171,11 @@ module.exports = function(args, config, entryPoint, debug) {
       if ((config.network.profiling === undefined || config.network.profiling) && config.network.profiling_file === undefined) {
         config.network.profiling_file = config.network.data_dir + '/profiles.dat'
       }
+    } else {
+      // 8.x defaults to all this files .key not .private
+      // also nodedb became netdb
+      config.network.transport_privkey = 'transport.private'
+      config.network.encryption_privkey = 'encryption.private'
     }
   }
   if (!configUtil.isBlockchainBinary3X && !configUtil.isBlockchainBinary4Xor5X && config.network.enabled) {

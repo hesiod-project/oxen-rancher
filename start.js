@@ -160,12 +160,17 @@ module.exports = function(args, config, entryPoint, debug) {
     // not lokig
     //transport-privkey=/Users/admin/.lokinet/transport.private
     //encryption-privkey=/Users/admin/.lokinet/encryption.private
-    config.network.transport_privkey = config.network.data_dir + '/transport.private'
-    config.network.encryption_privkey = config.network.data_dir + '/encryption.private'
-    config.network.ident_privkey = config.network.data_dir + '/identity.private'
-    config.network.contact_file = config.network.data_dir + '/self.signed'
-    if ((config.network.profiling === undefined || config.network.profiling) && config.network.profiling_file === undefined) {
-      config.network.profiling_file = config.network.data_dir + '/profiles.dat'
+    var version = lib.getNetworkVersion(config)
+    // 0.8.x doesn't need to prefix
+    const needToPrepend = (!version.match('lokinet-0.8.'))
+    if (needToPrepend) {
+      config.network.transport_privkey = config.network.data_dir + '/transport.private'
+      config.network.encryption_privkey = config.network.data_dir + '/encryption.private'
+      config.network.ident_privkey = config.network.data_dir + '/identity.private'
+      config.network.contact_file = config.network.data_dir + '/self.signed'
+      if ((config.network.profiling === undefined || config.network.profiling) && config.network.profiling_file === undefined) {
+        config.network.profiling_file = config.network.data_dir + '/profiles.dat'
+      }
     }
   }
   if (!configUtil.isBlockchainBinary3X && !configUtil.isBlockchainBinary4Xor5X && config.network.enabled) {

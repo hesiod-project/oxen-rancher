@@ -132,9 +132,24 @@ function getStorageVersion(config) {
         // no big deal, still return version
       }
       const storage_version = stdout.toString().trim()
-      const lines = storage_version.split(/\n/)
       //console.log('storage_version', storage_version)
+      const lines = storage_version.split(/\n/)
       //console.log('storage_version', lines.length, lines)
+      const foundVer = lines.filter(line => line.match(/Loki Storage Server v/))
+      if (!foundVer.length) {
+        console.error('LIB: could not find version line', lines)
+        return storage_version
+      }
+      if (foundVer.length > 1) {
+        console.warn('LIB: found multiple versions', foundVer, 'using first')
+      }
+      if (!foundVer[0].replace) {
+        console.error('LIB: version line is not string?!?')
+        return storage_version
+      }
+      storageVersion = foundVer[0].replace(' [info] [print_version]', '')
+      return storageVersion
+      /*
       // 2.0.7 uses 3 instead of 6...
       let useLine = lines.length === 3 ? 0 : 3;
       // [2020-03-12 07:53:16.940] [info] [print_version] Loki Storage Server v1.0.10
@@ -143,6 +158,7 @@ function getStorageVersion(config) {
         return storageVersion
       }
       return storage_version
+      */
     } catch(e) {
       console.error('Cant detect storage version', e)
       // can't hurt to retry I guess, maybe it is a temp problem
@@ -659,7 +675,7 @@ async function getLauncherStatus(config, lokinet, offlineMessage, cb) {
       checkDone('blockchain_rpc')
     }, 5000)
     // returns a promise now..
-    var p = lokinet.httpGet(url, function(data) {
+    var p = httpPost(url, '{}', function(data) {
       if (responded) return
       responded = true
       clearTimeout(blockchain_rpc_timer)

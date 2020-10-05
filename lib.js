@@ -95,7 +95,13 @@ Cant detect blockchain version Error: Command failed: /opt/loki-launcher/bin/lok
   stderr: <Buffer 2f 6f 70 74 2f 6c 6f 6b 69 2d 6c 61 75 6e 63 68 65 72 2f 62 69 6e 2f 6c 6f 6b 69 64 3a 20 2f 6c 69 62 2f 78 38 36 5f 36 34 2d 6c 69 6e 75 78 2d 67 6e ... 87 more bytes>
       */
       // stderr seems to be already echo'd
-      console.error('Cant detect blockchain version', e.stdout.toString())
+
+      if (e.signal === 'SIGILL') {
+        console.error("Cannot detect blockchain version. Your current lokid binary does not support your CPU")
+      } else {
+        console.error("Cannot detect blockchain version", e)
+        //console.error('Cant detect blockchain version', e.stdout.toString())
+      }
       // can't hurt to retry I guess, maybe it is a temp problem
     }
   }
@@ -160,7 +166,11 @@ function getStorageVersion(config) {
       return storage_version
       */
     } catch(e) {
-      console.error('Cant detect storage version', e)
+      if (e.signal === 'SIGILL') {
+        console.error("Cannot detect storage version. Your current loki-storage binary does not support your CPU")
+      } else {
+        console.error("Cannot detect storage version", e)
+      }
       // can't hurt to retry I guess, maybe it is a temp problem
     }
   }
@@ -178,7 +188,30 @@ function getNetworkVersion(config) {
       // lokinet-0.7.0-50514d55b
       return networkVersion
     } catch(e) {
-      console.error('Cant detect network version', e)
+      if (e.signal === 'SIGILL') {
+        console.error("Cannot detect network version. Your current lokinet binary does not support your CPU")
+/*
+Cant detect network version { Error: Command failed: /opt/loki-launcher/bin/lokinet --version
+    at checkExecSyncError (child_process.js:629:11)
+    at execFileSync (child_process.js:647:13)
+    at Object.getNetworkVersion (/root/snodes/sn7/lib.js:159:22)
+    at showVersions (/root/snodes/sn7/index.js:198:53)
+    at continueStart (/root/snodes/sn7/index.js:684:7)
+    at Object.<anonymous> (/root/snodes/sn7/index.js:22:3)
+    at Module._compile (internal/modules/cjs/loader.js:778:30)
+    at Object.Module._extensions..js (internal/modules/cjs/loader.js:789:10)
+    at Module.load (internal/modules/cjs/loader.js:653:32)
+    at tryModuleLoad (internal/modules/cjs/loader.js:593:12)
+  status: null,
+  signal: 'SIGILL',
+  output: [ null, <Buffer >, <Buffer > ],
+  pid: 52131,
+  stdout: <Buffer >,
+  stderr: <Buffer > }
+*/
+      } else {
+        console.error('Cant detect network version', e)
+      }
       // can't hurt to retry I guess, maybe it is a temp problem
     }
   }

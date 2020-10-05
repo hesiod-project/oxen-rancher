@@ -1231,6 +1231,16 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
     // why is the banner held back until we connect!?
     loki_daemon.stdout.on('data', (data) => {
       console.log(`blockchainRAW: ${data}`)
+
+      // lns.db recreation
+      // 2020-09-28 01:47:40.663	I Loading blocks into loki subsystems, scanning blockchain from height: 101250 to: 615676 (snl: 101250, lns: 496969)
+      // 2020-09-28 01:47:50.074	I ... scanning height 121250 (4.9152s) (snl: 1.01874s; lns: 0s)
+      // 2020-09-28 01:56:39.036	I Loading checkpoints
+
+      // 2020-10-02 03:58:12.642	W Height: 243956 prev difficulty: 526886804205806, new difficulty: 526886804205807
+      //
+      // 2020-10-02 04:01:57.499	E Failed to load hashes - unexpected data size 40164, expected 80324
+
       //var parts = data.toString().split(/\n/)
       //parts.pop()
       //stripped = parts.join('\n')
@@ -1361,7 +1371,7 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       if (loki_daemon.lastHeight) {
         if (loki_daemon.lastHeight === info.result.height) {
           loki_daemon.heightStuckCounter++;
-          console.log('LAUNCHER: blockchain seems to be stuck at', info.result.height, 'for', loki_daemon.heightStuckCounter, 'tests now')
+          console.log('LAUNCHER: blockchain has detected a slow block or stall', info.result.height, 'for', loki_daemon.heightStuckCounter, 'tests now')
           // 40 mins of being stuck
           if (loki_daemon.heightStuckCounter > 10) {
             console.log('LAUNCHER: detected stuck blockchain, restarting')

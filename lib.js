@@ -95,7 +95,13 @@ Cant detect blockchain version Error: Command failed: /opt/loki-launcher/bin/lok
   stderr: <Buffer 2f 6f 70 74 2f 6c 6f 6b 69 2d 6c 61 75 6e 63 68 65 72 2f 62 69 6e 2f 6c 6f 6b 69 64 3a 20 2f 6c 69 62 2f 78 38 36 5f 36 34 2d 6c 69 6e 75 78 2d 67 6e ... 87 more bytes>
       */
       // stderr seems to be already echo'd
-      console.error('Cant detect blockchain version', e.stdout.toString())
+
+      if (e.signal === 'SIGILL') {
+        console.error("Cannot detect blockchain version. Your current lokid binary does not support your CPU")
+      } else {
+        console.error("Cannot detect blockchain version", e)
+        //console.error('Cant detect blockchain version', e.stdout.toString())
+      }
       // can't hurt to retry I guess, maybe it is a temp problem
     }
   }
@@ -132,9 +138,24 @@ function getStorageVersion(config) {
         // no big deal, still return version
       }
       const storage_version = stdout.toString().trim()
-      const lines = storage_version.split(/\n/)
       //console.log('storage_version', storage_version)
+      const lines = storage_version.split(/\n/)
       //console.log('storage_version', lines.length, lines)
+      const foundVer = lines.filter(line => line.match(/Loki Storage Server v/))
+      if (!foundVer.length) {
+        console.error('LIB: could not find version line', lines)
+        return storage_version
+      }
+      if (foundVer.length > 1) {
+        console.warn('LIB: found multiple versions', foundVer, 'using first')
+      }
+      if (!foundVer[0].replace) {
+        console.error('LIB: version line is not string?!?')
+        return storage_version
+      }
+      storageVersion = foundVer[0].replace(' [info] [print_version]', '')
+      return storageVersion
+      /*
       // 2.0.7 uses 3 instead of 6...
       let useLine = lines.length === 3 ? 0 : 3;
       // [2020-03-12 07:53:16.940] [info] [print_version] Loki Storage Server v1.0.10
@@ -143,8 +164,13 @@ function getStorageVersion(config) {
         return storageVersion
       }
       return storage_version
+      */
     } catch(e) {
-      console.error('Cant detect storage version', e)
+      if (e.signal === 'SIGILL') {
+        console.error("Cannot detect storage version. Your current loki-storage binary does not support your CPU")
+      } else {
+        console.error("Cannot detect storage version", e)
+      }
       // can't hurt to retry I guess, maybe it is a temp problem
     }
   }
@@ -162,7 +188,30 @@ function getNetworkVersion(config) {
       // lokinet-0.7.0-50514d55b
       return networkVersion
     } catch(e) {
-      console.error('Cant detect network version', e)
+      if (e.signal === 'SIGILL') {
+        console.error("Cannot detect network version. Your current lokinet binary does not support your CPU")
+/*
+Cant detect network version { Error: Command failed: /opt/loki-launcher/bin/lokinet --version
+    at checkExecSyncError (child_process.js:629:11)
+    at execFileSync (child_process.js:647:13)
+    at Object.getNetworkVersion (/root/snodes/sn7/lib.js:159:22)
+    at showVersions (/root/snodes/sn7/index.js:198:53)
+    at continueStart (/root/snodes/sn7/index.js:684:7)
+    at Object.<anonymous> (/root/snodes/sn7/index.js:22:3)
+    at Module._compile (internal/modules/cjs/loader.js:778:30)
+    at Object.Module._extensions..js (internal/modules/cjs/loader.js:789:10)
+    at Module.load (internal/modules/cjs/loader.js:653:32)
+    at tryModuleLoad (internal/modules/cjs/loader.js:593:12)
+  status: null,
+  signal: 'SIGILL',
+  output: [ null, <Buffer >, <Buffer > ],
+  pid: 52131,
+  stdout: <Buffer >,
+  stderr: <Buffer > }
+*/
+      } else {
+        console.error('Cant detect network version', e)
+      }
       // can't hurt to retry I guess, maybe it is a temp problem
     }
   }
@@ -659,7 +708,7 @@ async function getLauncherStatus(config, lokinet, offlineMessage, cb) {
       checkDone('blockchain_rpc')
     }, 5000)
     // returns a promise now..
-    var p = lokinet.httpGet(url, function(data) {
+    var p = httpPost(url, '{}', function(data) {
       if (responded) return
       responded = true
       clearTimeout(blockchain_rpc_timer)

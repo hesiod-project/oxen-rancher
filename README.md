@@ -36,6 +36,7 @@ The goal of the launcher is to make it easier to run a service node, however the
 - Robust distribution system: Launcher relies on Microsoft/GitHub infrastructure, the DEBs are ran by our developer on his server. You could argue Microsoft/GitHub has more people keeping an eye on security and availability of their system. (And while we use NPM to distribute loki-launcher we do not use any NPM modules in this project)
 - Interactive client sessions, so you don't have lokid start up delays for each command you want to run
 - Unified subsystem reporting, get the status or versions of all 3 subsystems (blockchain, storage, network) from one command
+- Works on Ubuntu 19.x, DEBs only work with 18LTS and 20LTS (Xenial 16.x was deprecated in a way to only support the debs and not the launcher)
 
 Launcher is maintained at cost of the Loki Foundation and if it's not found to be of use, maybe unfunded. Please consider supporting this great tool by using it.
 

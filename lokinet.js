@@ -438,6 +438,7 @@ function readResolv(dns_ip, cb) {
   log('Current resolvers', resolvers)
   for (var i in resolvers) {
     const server = resolvers[i]
+    if (server.match(':')) continue // lokinet doesn't like ipv6 dns entries
     if (server == dns_ip) {
       log('preventing DNS loop on', dns_ip)
       continue

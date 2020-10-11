@@ -95,7 +95,9 @@ Cant detect blockchain version Error: Command failed: /opt/loki-launcher/bin/lok
   stderr: <Buffer 2f 6f 70 74 2f 6c 6f 6b 69 2d 6c 61 75 6e 63 68 65 72 2f 62 69 6e 2f 6c 6f 6b 69 64 3a 20 2f 6c 69 62 2f 78 38 36 5f 36 34 2d 6c 69 6e 75 78 2d 67 6e ... 87 more bytes>
       */
       // stderr seems to be already echo'd
-
+      if (e.code === 'EACCES') {
+        console.error("Cannot detect blockchain version. Your current lokid binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+      } else
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect blockchain version. Your current lokid binary does not support your CPU")
       } else {
@@ -166,6 +168,9 @@ function getStorageVersion(config) {
       return storage_version
       */
     } catch(e) {
+      if (e.code === 'EACCES') {
+        console.error("Cannot detect storage version. Your current loki-storage binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+      } else
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect storage version. Your current loki-storage binary does not support your CPU")
       } else {
@@ -188,6 +193,9 @@ function getNetworkVersion(config) {
       // lokinet-0.7.0-50514d55b
       return networkVersion
     } catch(e) {
+      if (e.code === 'EACCES') {
+        console.error("Cannot detect network version. Your current lokinet binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+      } else
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect network version. Your current lokinet binary does not support your CPU")
 /*

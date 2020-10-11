@@ -69,7 +69,7 @@ function start(user, dir, config) {
   return new Promise(resolve => {
     const killedLauncher = lib.stopLauncher(config)
     lib.waitForLauncherStop(config, function() {
-      const uidGetter = require(dir + '/uid')
+      const uidGetter = require(__dirname + '/../uid')
       console.log('setting permissions to', user)
       uidGetter.uidNumber(user, function(err, uid, homedir) {
         if (err) {
@@ -112,12 +112,14 @@ function start(user, dir, config) {
         // binary paths
         if (fs.existsSync(config.blockchain.binary_path)) {
           fs.chownSync(config.blockchain.binary_path, uid, 0)
+          fs.chmodSync(config.blockchain.binary_path, 0o755)
         } else {
           console.warn('Warning your lokid does not exist at', config.blockchain.binary_path, ', recommend running download-binaries or obtain them off github')
         }
         if (config.network.binary_path) {
           if (fs.existsSync(config.network.binary_path)) {
             fs.chownSync(config.network.binary_path, uid, 0)
+            fs.chmodSync(config.network.binary_path, 0o755)
           } else {
             console.warn('Warning your lokinet does not exist at', config.network.binary_path, ', recommend running download-binaries or obtain them off github')
           }
@@ -125,6 +127,7 @@ function start(user, dir, config) {
         if (config.storage.binary_path) {
           if (fs.existsSync(config.storage.binary_path)) {
             fs.chownSync(config.storage.binary_path, uid, 0)
+            fs.chmodSync(config.storage.binary_path, 0o755)
           } else {
             console.warn('Warning your loki-storage does not exist at', config.storage.binary_path, ', recommend running download-binaries or obtain them off github')
           }

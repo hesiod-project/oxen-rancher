@@ -13,18 +13,22 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build:
+  build-ci:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        DOCKERFILE: [Dockerfile.fresh, Dockerfile.migration, Dockerfile.outdated]
+        node_ver: [8, 10, 12, 14]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: Hello world action step
-        id: hello
-        uses: actions/run-docker-test-action@v1
-        with:
-          dockerFile: 'Dockerfile.fresh'
-          node_ver: 8
+      - name: Build
+        run: docker build  --build-arg node_ver=$node_ver -f $DOCKERFILE -t loki-project/loki-launcher .
+      - name: Run-release
+        run: docker run --cap-add NET_BIND_SERVICE --cap-add NET_ADMIN --network=host --privileged loki-project/loki-launcher /bin/sh -c "cd /usr/src/app && npm install -g && loki-launcher status && loki-launcher prequal && loki-launcher check-systemd && loki-launcher download-binaries && loki-launcher fix-perms root && loki-launcher config-view && loki-launcher start-debug --ignore-storage-server-port-check && sleep 30 && loki-launcher status && loki-launcher stop"
+      - name: Run-debug-testnet
+        run: docker run --cap-add NET_BIND_SERVICE --cap-add NET_ADMIN --network=host --privileged loki-project/loki-launcher /bin/sh -c "cd /usr/src/app && npm install -g && loki-launcher status --testnet && loki-launcher prequal-debug --testnet && loki-launcher check-systemd --testnet && loki-launcher download-binaries --testnet && loki-launcher fix-perms root --testnet && loki-launcher config-view --testnet && loki-launcher start-debug --testnet --ignore-storage-server-port-check && sleep 30 && loki-launcher status --testnet && loki-launcher stop --testnet"

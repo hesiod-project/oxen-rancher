@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: SetupBuild
-        run: docker build  --build-arg node_ver=${$node_ver} -f ${DOCKERFILE} -t loki-project/loki-launcher .
+        run: docker build  --build-arg node_ver=${node_ver} -f ${DOCKERFILE} -t loki-project/loki-launcher .
         env:
           DOCKERFILE: ${{ matrix.DOCKERFILE }}
           node_ver: ${{ matrix.node_ver }}

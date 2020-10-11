@@ -1371,7 +1371,9 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       if (loki_daemon.lastHeight) {
         if (loki_daemon.lastHeight === info.result.height) {
           loki_daemon.heightStuckCounter++;
-          console.log('LAUNCHER: blockchain has detected a slow block or stall', info.result.height, 'for', loki_daemon.heightStuckCounter, 'tests now')
+          if (loki_daemon.heightStuckCounter > 3) {
+            console.log('LAUNCHER: blockchain has detected a slow block or stall', info.result.height, 'for', loki_daemon.heightStuckCounter, 'tests now')
+          }
           // 40 mins of being stuck
           if (loki_daemon.heightStuckCounter > 10) {
             console.log('LAUNCHER: detected stuck blockchain, restarting')

@@ -158,12 +158,16 @@ function downloadArchive(url, config, options) {
           if (filename == 'loki-storage') {
             option = 'v'
           }
-          exec('/opt/loki-launcher/bin/' + filename + ' -' + option, (err, stdout, stderr) => {
-            console.log(filename, stdout)
-            if (options.cb) {
-              options.cb(true)
-            }
-          })
+          try {
+            exec('/opt/loki-launcher/bin/' + filename + ' -' + option, (err, stdout, stderr) => {
+              console.log(filename, stdout)
+              if (options.cb) {
+                options.cb(true)
+              }
+            })
+          } catch(e) {
+            console.error('download-binaries: get version error -', e)
+          }
         })
 
 

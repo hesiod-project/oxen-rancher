@@ -6,9 +6,7 @@ const lib = require(__dirname + '/../lib')
 const configUtil = require(__dirname + '/../config')
 const lokinet = require(__dirname + '/../lokinet') // expects 0.8 used for randomString
 const networkTest = require(__dirname + '/../lib.networkTest')
-const cp = require('child_process')
-const execSync = cp.execSync
-const exec = cp.exec
+const child_process = require('child_process')
 
 // now can't call this directly
 module.exports = function(config, debug, timeout) {
@@ -24,31 +22,10 @@ module.exports = function(config, debug, timeout) {
       console.log('')
     }
 
-
-    function osVersionTest() {
-      var lsbOut = execSync('lsb_release -c')
-      // console.log('Codename:', lsbOut.toString())
-      if (!lsbOut) {
-        console.warn('Can not get linux code name using lsb_release')
-        return false
-      }
-      var codename = lsbOut.toString()
-      if (codename.match(/xenial/i)) {
-        return false
-      }
-      if (codename.match(/stretch/i)) {
-        return false
-      }
-      if (codename.match(/jessie/i)) {
-        return false
-      }
-      return true
-    }
-
     // diskspace check
     function getFreeSpaceUnix(path, cb) {
       if (debug) console.log('checking diskspace on', path)
-      exec('df -kP ' + path, function(error, stdout) {
+      child_process.exec('df -kP ' + path, function(error, stdout) {
         if (debug) console.log('stdout', stdout)
         var lines = stdout.split('\n')
         if (debug) console.log('df lines', lines.length)
@@ -86,7 +63,6 @@ module.exports = function(config, debug, timeout) {
     var need = {
       diskspace: false,
       rpcport: false,
-      // osVersion: false,
     }
     var blockchain_size = 20 //gb
     var storage_size = 5 //gb
@@ -195,7 +171,6 @@ module.exports = function(config, debug, timeout) {
         // FIXME: hopefully running as the right user
         lokinet.mkDirByPathSync(config.blockchain.data_dir)
       }
-
       getFreeSpaceUnix(config.blockchain.data_dir, function(space) {
         if (debug) console.debug(config.blockchain.data_dir, 'space', space, 'GBi free')
         diskspaces.blockchain = space
@@ -339,18 +314,8 @@ module.exports = function(config, debug, timeout) {
       }, debug)
     }
 
-    if (!osVersionTest()) {
-      console.warn('osVersion: Warning !')
-      log.push('YOU ARE ON AN OLDER UNSUPPORTED OS, PLEASE UPGRADE TO BIONIC or BUSTER OR LATER.')
-      snode_warnings++
-    } else {
-      console.log('osVersion: Success !')
-    }
-
     const killedLauncher = lib.stopLauncher(config)
     lib.waitForLauncherStop(config, function() {
-      markCheckDone('osVersion')
-
       portTest()
     })
   })

@@ -134,6 +134,9 @@ function shutdown_everything() {
   shutdown_blockchain()
   // clear our start up lock (if needed, will crash if not there)
   lib.clearStartupLock(module.exports.config)
+  // kill any blockchain restarts
+  module.exports.config.blockchain.restart = false
+
   // FIXME: should we be savings pids as we shutdown? probably
 
   // only set this timer once... (and we'll shut ourselves down)
@@ -446,6 +449,8 @@ function launcherStorageServer(config, args, cb) {
           // swarm_tick communication error
           if (str.match(/Failed to contact local Lokid/)) {
             var ts = Date.now()
+            // skip if lokid is restarting...
+            if (requestBlockchainRestartLock) continue
             lastLokidContactFailures.push(ts)
             if (lastLokidContactFailures.length > 5) {
               lastLokidContactFailures.splice(-5)
@@ -463,9 +468,13 @@ function launcherStorageServer(config, args, cb) {
               // now it's a race, between us detect lokid shutting down
               // and us trying to restart it...
               // mainly will help deadlocks
-              if (!exitRequested) {
-                console.log('we should restart lokid');
-                requestBlockchainRestart(config);
+              if (!exitRequested) { // user typed exit
+                // don't keep trying to restart it
+                // lokid will be done for 30s if it's being restarted.
+                //if (loki_daemon && !loki_daemon.killed) {
+                  console.log('we should restart lokid');
+                  requestBlockchainRestart(config);
+                //}
               }
             }
             if (storageLogging) console.log(`STORAGE: blockchain tick contact failure`)
@@ -1189,12 +1198,28 @@ function configureLokid(config, args) {
 var loki_daemon
 var inPrepareReg = false
 var savePidConfig = {}
+var lastLokiStorageContactFailures = []
 function launchLokid(binary_path, lokid_options, interactive, config, args, cb) {
   if (shuttingDown) {
     //if (cb) cb()
     console.log('BLOCKCHAIN: Not going to start lokid, shutting down.')
     return
   }
+
+  if (loki_daemon) {
+    if (loki_daemon.killed) {
+      // only should be displayed on a restart
+      console.log('BLOCKCHAIN: there\'s already a killed loki_daemon set')
+      // seems to be ok to restart...
+    } else {
+      console.log('BLOCKCHAIN: there\'s already a running loki_daemon set')
+      // maybe we should stop start up
+      // so we don't double claim ports and shutdown everything
+      // we should delay so we don't lose a handle on the running loki_daemon
+      // otherwise we can never kill/manage it
+    }
+  }
+
   // hijack STDIN but not OUT/ERR
   //console.log('launchLokid - interactive?', interactive)
   if (interactive) {
@@ -1221,6 +1246,9 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
 
   loki_daemon.startTime = Date.now()
   loki_daemon.startedOptions = lokid_options
+  loki_daemon.storageFailures = {
+
+  }
   savePidConfig = {
     config: config,
     args: args,
@@ -1240,6 +1268,39 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       // 2020-10-02 03:58:12.642	W Height: 243956 prev difficulty: 526886804205806, new difficulty: 526886804205807
       //
       // 2020-10-02 04:01:57.499	E Failed to load hashes - unexpected data size 40164, expected 80324
+
+      // 2020-10-12 03:11:00.660 I Failed to submit uptime proof: have not heard from the storage server recently. Make sure that it is running! It is required to run alongside the Loki daemon
+
+      // we can get 3-4 before loki-storage pings a fresh restart
+      if (data.match(/Failed to submit uptime proof: have not heard from the storage server recently/)) {
+        var ts = Date.now()
+        lastLokiStorageContactFailures.push(ts)
+        // loki-storage may not be running
+        // this should only happen on a double lokid restart
+        // (wouldn't shouldn't ever happen now)
+        // the 2nd lokid will die and kill everything
+        // except the first lokid
+
+        if (lastLokiStorageContactFailures.length > 20) {
+          lastLokiStorageContactFailures.splice(-20)
+        }
+        if (!shuttingDown) {
+          console.log('BLOCKCHAIN: Have not heard from loki-storage, failure count', lastLokidContactFailures.length, 'first', parseInt((ts - lastLokiStorageContactFailures[0]) / 1000) + 's ago')
+        }
+        if (lastLokiStorageContactFailures.length == 20 && ts - lastLokiStorageContactFailures[0] < 900 * 1000) {
+          // now it's a race, between us detect lokid shutting down
+          // and us trying to restart it...
+          // mainly will help deadlocks
+          if (!exitRequested) { // user typed exit
+            console.log('we should restart loki-storage');
+            //(config);
+          }
+        }
+        console.log(`BLOCKCHAIN: storage tick contact failure`)
+        loki_daemon.storageFailures.last_storage_tick = Date.now()
+        //communicate this out
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
+      }
 
       //var parts = data.toString().split(/\n/)
       //parts.pop()
@@ -1371,7 +1432,9 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       if (loki_daemon.lastHeight) {
         if (loki_daemon.lastHeight === info.result.height) {
           loki_daemon.heightStuckCounter++;
-          console.log('LAUNCHER: blockchain has detected a slow block or stall', info.result.height, 'for', loki_daemon.heightStuckCounter, 'tests now')
+          if (loki_daemon.heightStuckCounter > 3) {
+            console.log('LAUNCHER: blockchain has detected a slow block or stall', info.result.height, 'for', loki_daemon.heightStuckCounter, 'tests now')
+          }
           // 40 mins of being stuck
           if (loki_daemon.heightStuckCounter > 10) {
             console.log('LAUNCHER: detected stuck blockchain, restarting')
@@ -1415,15 +1478,19 @@ function requestBlockchainRestart(config, cb) {
   console.log('LAUNCHER: requesting blockchain restart')
   shutdown_blockchain()
   waitfor_blockchain_shutdown(function() {
-    if (shuttingDown) {
-      console.log('LAUNCHER: not going to restart lokid, we are shutting down')
-      return
-    }
-    console.log('BLOCKCHAIN: Restarting lokid.')
-    launchLokid(config.blockchain.binary_path, obj.blockchain_startedOptions, config.launcher.interactive, config, obj.arg)
-    requestBlockchainRestartLock = false
-    config.blockchain.restart = oldVal
-    if (cb) cb()
+    // lokid will be done for 30s if it's being restarted.
+    setTimeout(function() {
+      if (shuttingDown) {
+        console.log('LAUNCHER: not going to restart lokid, we are shutting down')
+        return
+      }
+      console.log('BLOCKCHAIN: Releasing lokid restart lock. Restart setting being restored back to', oldVal)
+      // we don't need to relauncher if we set restart = 1
+      //launchLokid(config.blockchain.binary_path, obj.blockchain_startedOptions, config.launcher.interactive, config, obj.arg)
+      requestBlockchainRestartLock = false
+      config.blockchain.restart = oldVal
+      if (cb) cb()
+    }, (15 + 30) * 1000) // give it an extra 15s to start up
   })
 }
 
@@ -1559,6 +1626,8 @@ function startLokid(config, args) {
         // from shuttingdown everything
         //shuttingDown = true
         exitRequested = true
+        // force restart off
+        config.blockchain.restart = false
       }
     })
     stdin.on('error', function(err) {

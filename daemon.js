@@ -446,6 +446,8 @@ function launcherStorageServer(config, args, cb) {
           // swarm_tick communication error
           if (str.match(/Failed to contact local Lokid/)) {
             var ts = Date.now()
+            // skip if lokid is restarting...
+            if (requestBlockchainRestartLock) continue
             lastLokidContactFailures.push(ts)
             if (lastLokidContactFailures.length > 5) {
               lastLokidContactFailures.splice(-5)
@@ -1241,6 +1243,8 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       //
       // 2020-10-02 04:01:57.499	E Failed to load hashes - unexpected data size 40164, expected 80324
 
+      // 2020-10-12 03:11:00.660 I Failed to submit uptime proof: have not heard from the storage server recently. Make sure that it is running! It is required to run alongside the Loki daemon
+
       //var parts = data.toString().split(/\n/)
       //parts.pop()
       //stripped = parts.join('\n')
@@ -1422,7 +1426,8 @@ function requestBlockchainRestart(config, cb) {
       return
     }
     console.log('BLOCKCHAIN: Restarting lokid.')
-    launchLokid(config.blockchain.binary_path, obj.blockchain_startedOptions, config.launcher.interactive, config, obj.arg)
+    // we don't need to relauncher if we set restart = 1
+    //launchLokid(config.blockchain.binary_path, obj.blockchain_startedOptions, config.launcher.interactive, config, obj.arg)
     requestBlockchainRestartLock = false
     config.blockchain.restart = oldVal
     if (cb) cb()

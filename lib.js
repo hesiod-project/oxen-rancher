@@ -101,8 +101,10 @@ Cant detect blockchain version Error: Command failed: /opt/loki-launcher/bin/lok
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect blockchain version. Your current lokid binary does not support your CPU")
       } else {
+        // not a crash but bad exit..
         if (e.signal === null && e.status === 1 && e.error === null) {
           // LIBC error
+          console.log('message', e.message)
         }
         console.error("Cannot detect blockchain version", e)
         //console.error('Cant detect blockchain version', e.stdout.toString())

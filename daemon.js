@@ -1093,7 +1093,9 @@ function arrayHasClOption(arr, option) {
 function configureLokid(config, args) {
   //console.log('configureLokid', args)
   var lokid_options = []
-  if (!arrayHasClOption(args, '--service-node')) {
+  // this matches --service-node-...
+  if (!arrayHasClOption(args, /^--service-node$/)) {
+    //console.log('adding --SN')
     lokid_options.push('--service-node')
   }
 
@@ -1174,7 +1176,9 @@ function configureLokid(config, args) {
       lokid_options.push('--storage-server-port', config.storage.port)
     }
     // make sure not passed in xmrOptions
+    //console.log('args', args)
     if (!arrayHasClOption(args, '--service-node-public-ip')) {
+      //console.log('adding', config.launcher.publicIPv4)
       lokid_options.push('--service-node-public-ip', config.launcher.publicIPv4)
     }
   } else {
@@ -1186,12 +1190,139 @@ function configureLokid(config, args) {
   }
 
   // copy CLI options to lokid
+  var normalizeArgs = []
+  function normalizeSet(key, value) {
+    //console.log('set?', key, ':', value)
+    // remove any previous setting
+    normalizeArgs = normalizeArgs.filter(item => {
+      var parts = item.replace(/^--/, '').split(/=/)
+      var newSet = key !== parts.shift()
+      if (!newSet) {
+        console.warn('Overriding earlier option of', item)
+      }
+      return newSet
+    })
+    // always add the new setting
+    normalizeArgs.push('--' + key + '=' + value)
+  }
+
+  // what if we normalize them into an array
+  var last = null
+  var all_options = lokid_options.concat(args)
+  //console.log('all_options', all_options)
+  for (var i in all_options) {
+    // should we prevent --non-interactive?
+    // probably not, if they want to run it that way, why not support it?
+
+    // FIXME: we just need to adjust internal config
+    // do we?
+    var arg = '' + all_options[i]
+    //console.log('arg', arg)
+
+    if (arg.match(/^--/)) {
+      // -- part
+      if (last != null) {
+        // if last was --!=
+        // now removeDashes is definitely not a value
+        // codify no value...
+        normalizeSet(last, '__REMOVE_ME__', false)
+        last = null
+      }
+      var removeDashes = arg.replace(/^--/, '')
+      if (arg.match(/=/)) {
+        var parts = removeDashes.split(/=/)
+        var key = parts.shift()
+        var value = parts.join('=')
+        normalizeSet(key, value, false)
+        last = null
+      } else {
+        // read next to make a decision
+        last = removeDashes
+      }
+    } else {
+      // hack to allow equal to be optional..
+      if (last != null) {
+        // should stitch together last = arg
+        normalizeSet(last, arg, true)
+      }
+      last = null
+    }
+  }
+  //console.log('last', last)
+  // and process them as such...
+  //console.log('normalized args', normalizeArgs)
+  lokid_options = normalizeArgs.map(str => str.replace('=__REMOVE_ME__', ''))
+  // well we used 2 buckets before
+  // so we didn't collide on current item
+  // if we use lokid_options then we're back to the parse problem...
+
+  /*
+  function removeSetOptions(key, value, spaceSepOption) {
+    console.log('removeSetOptions', key, value, spaceSepOption)
+    for(var j in lokid_options) {
+      var option = lokid_options[j] + '' // have to convert to string because number become numbers
+      // FIXME what about ' ' options?
+      console.log('checking', option, '==', key)
+      if ((option.match && option.match(/=/)) || ((value === true || spaceSepOption === true) && key === option)) {
+        var parts2 = option.split(/=/)
+        var option_key = parts2.shift()
+        console.log('checking key', option_key)
+        if (spaceSepOption) {
+          // skip if the j === lokid_options.length -1
+          console.log(j, '===', lokid_options.length - 1, lokid_options.length - 1 === +j)
+          if (lokid_options.length - 1 === +j) {
+            continue
+            // but isn't this always the case...
+          }
+        }
+        if (option_key == key) {
+          // warn if stomping an INI settings, set above...
+          // but we promote xmr options to INI/config...
+          // but we'll skip it now with arrayHasClOption
+          console.log('BLOCKCHAIN: Removing previous established option', option)
+          lokid_options.splice(j, 1)
+        }
+      }
+    }
+  }
+  var last = null
   for (var i in args) {
     // should we prevent --non-interactive?
     // probably not, if they want to run it that way, why not support it?
+
     // FIXME: we just need to adjust internal config
     var arg = args[i]
-    //console.log('arg', arg)
+    console.log('arg', arg)
+
+    if (arg.match(/^--/)) {
+      var removeDashes = arg.replace(/^--/, '')
+      if (arg.match(/=/)) {
+        var parts = removeDashes.split(/=/)
+        var key = parts.shift()
+        var value = parts.join('=')
+        removeSetOptions('--' + key, value, false)
+        last = null
+      } else {
+        // -- part
+        if (last != null) {
+          // if last was --!=
+          // now removeDashes is definitely not a value
+          removeSetOptions('--' + last, true, false)
+          last = null
+        }
+        // read next to make a decision
+        last = '--' + removeDashes
+      }
+    } else {
+      // hack to allow equal to be optional..
+      if (last != null) {
+        // should stitch together last = arg
+        removeSetOptions(last, arg, true)
+      }
+      last = null
+    }
+    */
+    /*
     if (arg.match(/=/)) {
       // assignment
       var parts = arg.split(/=/)
@@ -1212,6 +1343,9 @@ function configureLokid(config, args) {
         }
       }
     } else {
+      // arg doesn't contain =
+      // does it contain --
+      // does the next arg contain --
       for(var j in lokid_options) {
         var option = lokid_options[j]
         if (arg == option) {
@@ -1220,9 +1354,12 @@ function configureLokid(config, args) {
         }
       }
     }
+    */
+  /*
     lokid_options.push(args[i])
-    //console.log('options', lokid_options)
+    console.log('options', lokid_options)
   }
+  */
   //console.log('final options', lokid_options)
 
   return {

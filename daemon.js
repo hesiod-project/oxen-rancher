@@ -1081,17 +1081,36 @@ function startLauncherDaemon(config, interactive, entryPoint, args, debug, cb) {
   }
 }
 
+function arrayHasClOption(arr, option) {
+  return arr.some(item => {
+    //console.log('item', item)
+    return (''+item).match(option)
+  })
+}
+
 // compile config into CLI arguments
 // only needs to be ran when config changes
 function configureLokid(config, args) {
-  var lokid_options = ['--service-node']
+  //console.log('configureLokid', args)
+  var lokid_options = []
+  if (!arrayHasClOption(args, '--service-node')) {
+    lokid_options.push('--service-node')
+  }
 
   // if ip is not localhost, pass it to lokid
   if (config.blockchain.rpc_ip && config.blockchain.rpc_ip != '127.0.0.1') {
-    lokid_options.push('--rpc-bind-ip='+config.blockchain.rpc_ip, '--confirm-external-bind')
+    if (!arrayHasClOption(args, '--rpc-bind-ip')) {
+      lokid_options.push('--rpc-bind-ip=' + config.blockchain.rpc_ip)
+    }
+    if (!arrayHasClOption(args, '--confirm-external-bind')) {
+      lokid_options.push('--confirm-external-bind')
+    }
   }
-
-  if (config.blockchain.rpc_pass) {
+  if (config.blockchain.p2p_ip && config.blockchain.p2p_ip !== '0.0.0.0'
+      && !arrayHasClOption(args, '--p2p-bind-ip')) {
+    lokid_options.push('--p2p-bind-ip=' + config.blockchain.p2p_ip)
+  }
+  if (config.blockchain.rpc_pass && !arrayHasClOption(args, '--rpc-login')) {
     lokid_options.push('--rpc-login='+config.blockchain.rpc_user+':'+config.blockchain.rpc_pass)
   }
   if (!config.launcher.interactive) {
@@ -1102,58 +1121,67 @@ function configureLokid(config, args) {
     // only really good for debugging lokid stuffs
     //lokinet.disableLogging()
   }
-  if (config.blockchain.zmq_port) {
+  if (config.blockchain.zmq_port && !arrayHasClOption(args, '--zmq-bind-port')) {
     lokid_options.push('--zmq-rpc-bind-port=' + config.blockchain.zmq_port)
   }
   // FIXME: be nice to skip if it was the default...
   // can we turn it off?
-  if (config.blockchain.rpc_port) {
+  if (config.blockchain.rpc_port && !arrayHasClOption(args, '--rpc-bind-port')) {
     lokid_options.push('--rpc-bind-port=' + config.blockchain.rpc_port)
   }
-  if (config.blockchain.p2p_port) {
+  if (config.blockchain.p2p_port && !arrayHasClOption(args, '--p2p-bind-port')) {
     lokid_options.push('--p2p-bind-port=' + config.blockchain.p2p_port)
   }
-  if (config.blockchain.data_dir) {
+  if (config.blockchain.data_dir&& !arrayHasClOption(args, '--data-dir')) {
     lokid_options.push('--data-dir=' + config.blockchain.data_dir)
   }
 
   // net selection at the very end because we may need to override a lot of things
   // but not before the dedupe
-  if (config.blockchain.network == "test") {
-    lokid_options.push('--testnet')
-  } else
-  if (config.blockchain.network == "demo") {
-    lokid_options.push('--testnet')
-    lokid_options.push('--add-priority-node=116.203.126.14')
-  } else
-  if (config.blockchain.network == "staging") {
-    lokid_options.push('--stagenet')
+  if (!arrayHasClOption(args, '--testnet') && !arrayHasClOption(args, '--stagenet')) {
+    if (config.blockchain.network == "test") {
+      lokid_options.push('--testnet')
+    } else
+    if (config.blockchain.network == "demo") {
+      lokid_options.push('--testnet')
+      lokid_options.push('--add-priority-node=116.203.126.14')
+    } else
+    if (config.blockchain.network == "staging") {
+      lokid_options.push('--stagenet')
+    }
   }
 
-  // logical core count
-  let cpuCount = os.cpus().length
-  if (fs.existsSync('/sys/devices/system/cpu/online')) {
-    // 0-63
-    const cpuData = fs.readFileSync('/sys/devices/system/cpu/online')
-    cpuCount = parseInt(cpuData.toString().replace(/^0-/, '')) + 1
-  }
-  console.log('CPU Count', cpuCount)
-  // getconf _NPROCESSORS_ONLN
-  // /sys/devices/system/cpu/online
-  if (cpuCount > 16) {
-    lokid_options.push('--max-concurrency=16')
+  if (!arrayHasClOption(args, '--max-concurrency')) {
+    // logical core count
+    let cpuCount = os.cpus().length
+    if (fs.existsSync('/sys/devices/system/cpu/online')) {
+      // 0-63
+      const cpuData = fs.readFileSync('/sys/devices/system/cpu/online')
+      cpuCount = parseInt(cpuData.toString().replace(/^0-/, '')) + 1
+    }
+    console.log('CPU Count', cpuCount)
+    // getconf _NPROCESSORS_ONLN
+    // /sys/devices/system/cpu/online
+    if (cpuCount > 16) {
+        lokid_options.push('--max-concurrency=16')
+    }
   }
 
   // not 3.x
   if (!configUtil.isBlockchainBinary3X(config)) {
     // 4.x+
-    lokid_options.push('--storage-server-port', config.storage.port)
-    lokid_options.push('--service-node-public-ip', config.launcher.publicIPv4)
+    if (!arrayHasClOption(args, '--storage-server-port')) {
+      lokid_options.push('--storage-server-port', config.storage.port)
+    }
+    // make sure not passed in xmrOptions
+    if (!arrayHasClOption(args, '--service-node-public-ip')) {
+      lokid_options.push('--service-node-public-ip', config.launcher.publicIPv4)
+    }
   } else {
     console.log('3.x blockchain block binary detected')
   }
   // 6.x+
-  if (!configUtil.isBlockchainBinary3X(config) && !configUtil.isBlockchainBinary4Xor5X(config) && config.blockchain.qun_port) {
+  if (!configUtil.isBlockchainBinary3X(config) && !configUtil.isBlockchainBinary4Xor5X(config) && config.blockchain.qun_port && !arrayHasClOption(args, '--quorumnet-port')) {
     lokid_options.push('--quorumnet-port=' + config.blockchain.qun_port)
   }
 
@@ -1163,16 +1191,21 @@ function configureLokid(config, args) {
     // probably not, if they want to run it that way, why not support it?
     // FIXME: we just need to adjust internal config
     var arg = args[i]
+    //console.log('arg', arg)
     if (arg.match(/=/)) {
       // assignment
       var parts = arg.split(/=/)
       var key = parts.shift()
+      // check to make sure it's not already added
       for(var j in lokid_options) {
         var option = lokid_options[j] + '' // have to convert to string because number become numbers
         if (option.match && option.match(/=/)) {
           var parts2 = option.split(/=/)
           var option_key = parts2.shift()
           if (option_key == key) {
+            // warn if stomping an INI settings, set above...
+            // but we promote xmr options to INI/config...
+            // but we'll skip it now with arrayHasClOption
             console.log('BLOCKCHAIN: Removing previous established option', option)
             lokid_options.splice(j, 1)
           }
@@ -1188,7 +1221,9 @@ function configureLokid(config, args) {
       }
     }
     lokid_options.push(args[i])
+    //console.log('options', lokid_options)
   }
+  //console.log('final options', lokid_options)
 
   return {
     lokid_options: lokid_options,
@@ -1588,7 +1623,9 @@ function handleInput(line) {
 // and we'll recall this function if we need to update the config too...
 // also implies we'd need a reload other than HUP, USR1?
 function startLokid(config, args) {
+  //console.log('startLokid', args)
   var parameters = configureLokid(config, args)
+  //console.log('parameters', parameters)
   var lokid_options = parameters.lokid_options
   //console.log('configured ', config.blockchain.binary_path, lokid_options.join(' '))
 

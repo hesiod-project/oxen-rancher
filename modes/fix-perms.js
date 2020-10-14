@@ -141,7 +141,7 @@ function start(user, dir, config) {
           fs.chownSync(config.launcher.var_path, uid, 0)
           // should also make /opt/loki-launcher not root
           // but not /var
-          if (config.launcher.var_path == '/opt/loki-launcher/var') {
+          if (config.launcher.var_path === '/opt/loki-launcher/var') {
             fs.chownSync('/opt/loki-launcher', uid, 0)
           }
         }

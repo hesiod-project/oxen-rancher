@@ -190,7 +190,7 @@ function httpGet(url, cb) {
       clearInterval(stopWatchdog)
       //console.log('err', err)
       if (cb) cb()
-        else reject()
+        else reject(err)
     })
   })
   p.ref = ref

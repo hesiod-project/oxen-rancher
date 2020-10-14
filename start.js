@@ -40,6 +40,7 @@ function isNothingRunning(running) {
 }
 
 function setupBlockchainForStart(args, config) {
+  //console.log('setupBlockchainForStart args', args)
   // index.js does this already...
   //configUtil.check(config)
 
@@ -117,11 +118,32 @@ function setupBlockchainForStart(args, config) {
       console.warn('Can\'t read rpc-login command line argument', xmrOptions['rpc-login'])
     }
   }
+  // any way to validate these ip strings?
+  // have to do this first as it should drive the others...
+  if (xmrOptions['service-node-public-ip']) {
+    config.launcher.publicIPv4 = xmrOptions['service-node-public-ip']
+    // will this stomp INI? yes
+    // so we'll just make sure they're not set
+    // rpc defaults to 127.0.0.1 (not public)
+    // don't want to accidentally make it public...
+    /*
+    if (config.blockchain.rpc_ip === undefined) {
+      config.blockchain.rpc_ip = config.launcher.publicIPv4
+    }
+    */
+    if (config.blockchain.p2p_ip === undefined) {
+      config.blockchain.p2p_ip = config.launcher.publicIPv4
+    }
+    //config.blockchain.zmq_ip = config.launcher.publicIPv4
+  }
   // rpc_ip
   if (xmrOptions['rpc-bind-ip']) {
-    // any way to validate this string?
     config.blockchain.rpc_ip = xmrOptions['rpc-bind-ip']
   }
+  if (xmrOptions['p2p-bind-ip']) {
+    config.blockchain.p2p_ip = xmrOptions['p2p-bind-ip']
+  }
+
   function setPort(cliKey, configKey, subsystem) {
     if (subsystem === undefined) subsystem = 'blockchain'
     //console.log('xmrOptions', xmrOptions, 'checking for', cliKey, 'setting', subsystem, configKey)
@@ -140,6 +162,7 @@ function setupBlockchainForStart(args, config) {
 }
 
 module.exports = function(args, config, entryPoint, debug) {
+  //console.log('start module args', args)
   const VERSION = 0.7
 
   //var logo = lib.getLogo('L A U N C H E R   v e r s i o n   v version')
@@ -178,6 +201,7 @@ module.exports = function(args, config, entryPoint, debug) {
       config.network.encryption_privkey = 'encryption.private'
     }
   }
+  // if not 3-6x
   if (!configUtil.isBlockchainBinary3X && !configUtil.isBlockchainBinary4Xor5X && config.network.enabled) {
     lokinet.checkConfig(config.network) // can auto-configure network.binary_path. how?
   }
@@ -224,6 +248,7 @@ module.exports = function(args, config, entryPoint, debug) {
   */
 
   // upload final lokid to lokinet
+  //console.log('blockchain', config.blockchain)
   config.network.lokid = config.blockchain
 
   //
@@ -352,6 +377,7 @@ module.exports = function(args, config, entryPoint, debug) {
   daemon.config = config // update config for shutdownEverything
 
   function startEverything(config, args) {
+    //console.log('startEverything args', args)
     for (var i in args) {
       // should we prevent --non-interactive?
       // probably not, if they want to run it that way, why not support it?
@@ -373,7 +399,7 @@ module.exports = function(args, config, entryPoint, debug) {
       // should be in the daemon at this point...
       if (config.launcher.publicIPv4) {
         // manually configured
-        start(config, foregroundIt, entryPoint, args)
+        start(config, args)
       } else {
         // auto configure value
         lokinet.getPublicIPv4(function(publicIPv4) {
@@ -382,11 +408,12 @@ module.exports = function(args, config, entryPoint, debug) {
             process.exit()
           }
           config.launcher.publicIPv4 = publicIPv4
-          start(config, foregroundIt, entryPoint, args)
+          start(config, args)
         })
       }
 
       function start(config, args) {
+        //console.log('start args', args)
         // start the lokinet prep
         daemon.startLokinet(config, args, function(started) {
           //console.log('StorageServer now running', started)

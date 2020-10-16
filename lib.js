@@ -101,6 +101,11 @@ Cant detect blockchain version Error: Command failed: /opt/loki-launcher/bin/lok
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect blockchain version. Your current lokid binary does not support your CPU")
       } else {
+        // not a crash but bad exit..
+        if (e.signal === null && e.status === 1 && e.error === null) {
+          // LIBC error
+          console.log('message', e.message)
+        }
         console.error("Cannot detect blockchain version", e)
         //console.error('Cant detect blockchain version', e.stdout.toString())
       }
@@ -591,7 +596,22 @@ async function runStorageRPCTest(lokinet, config, cb) {
   }, 5000)
   var oldTLSValue = process.env["NODE_TLS_REJECT_UNAUTHORIZED"]
   process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = '0' // turn it off for now
-  const data =  await lokinet.httpGet(url)
+  let data
+  try {
+    data =  await lokinet.httpGet(url)
+  } catch(e) {
+    if (e !== undefined) {
+      if (e.code === 'ECONNREFUSED') {
+        // simply not listening/running (yet...?)
+      } else {
+        // most e are already displayed in httpGet
+        //console.error('runStorageRPCTest httpGet failure', e)
+      }
+    } else {
+      // a reject...
+      // shutdown or 404/403
+    }
+  }
   process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = oldTLSValue
   clearTimeout(storage_rpc_timer)
   if (responded) return

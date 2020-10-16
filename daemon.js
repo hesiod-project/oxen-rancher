@@ -1081,17 +1081,38 @@ function startLauncherDaemon(config, interactive, entryPoint, args, debug, cb) {
   }
 }
 
+function arrayHasClOption(arr, option) {
+  return arr.some(item => {
+    //console.log('item', item)
+    return (''+item).match(option)
+  })
+}
+
 // compile config into CLI arguments
 // only needs to be ran when config changes
 function configureLokid(config, args) {
-  var lokid_options = ['--service-node']
+  //console.log('configureLokid', args)
+  var lokid_options = []
+  // this matches --service-node-...
+  if (!arrayHasClOption(args, /^--service-node$/)) {
+    //console.log('adding --SN')
+    lokid_options.push('--service-node')
+  }
 
   // if ip is not localhost, pass it to lokid
   if (config.blockchain.rpc_ip && config.blockchain.rpc_ip != '127.0.0.1') {
-    lokid_options.push('--rpc-bind-ip='+config.blockchain.rpc_ip, '--confirm-external-bind')
+    if (!arrayHasClOption(args, '--rpc-bind-ip')) {
+      lokid_options.push('--rpc-bind-ip=' + config.blockchain.rpc_ip)
+    }
+    if (!arrayHasClOption(args, '--confirm-external-bind')) {
+      lokid_options.push('--confirm-external-bind')
+    }
   }
-
-  if (config.blockchain.rpc_pass) {
+  if (config.blockchain.p2p_ip && config.blockchain.p2p_ip !== '0.0.0.0'
+      && !arrayHasClOption(args, '--p2p-bind-ip')) {
+    lokid_options.push('--p2p-bind-ip=' + config.blockchain.p2p_ip)
+  }
+  if (config.blockchain.rpc_pass && !arrayHasClOption(args, '--rpc-login')) {
     lokid_options.push('--rpc-login='+config.blockchain.rpc_user+':'+config.blockchain.rpc_pass)
   }
   if (!config.launcher.interactive) {
@@ -1102,83 +1123,229 @@ function configureLokid(config, args) {
     // only really good for debugging lokid stuffs
     //lokinet.disableLogging()
   }
-  if (config.blockchain.zmq_port) {
+  if (config.blockchain.zmq_port && !arrayHasClOption(args, '--zmq-bind-port')) {
     lokid_options.push('--zmq-rpc-bind-port=' + config.blockchain.zmq_port)
   }
   // FIXME: be nice to skip if it was the default...
   // can we turn it off?
-  if (config.blockchain.rpc_port) {
+  if (config.blockchain.rpc_port && !arrayHasClOption(args, '--rpc-bind-port')) {
     lokid_options.push('--rpc-bind-port=' + config.blockchain.rpc_port)
   }
-  if (config.blockchain.p2p_port) {
+  if (config.blockchain.p2p_port && !arrayHasClOption(args, '--p2p-bind-port')) {
     lokid_options.push('--p2p-bind-port=' + config.blockchain.p2p_port)
   }
-  if (config.blockchain.data_dir) {
+  if (config.blockchain.data_dir&& !arrayHasClOption(args, '--data-dir')) {
     lokid_options.push('--data-dir=' + config.blockchain.data_dir)
   }
 
   // net selection at the very end because we may need to override a lot of things
   // but not before the dedupe
-  if (config.blockchain.network == "test") {
-    lokid_options.push('--testnet')
-  } else
-  if (config.blockchain.network == "demo") {
-    lokid_options.push('--testnet')
-    lokid_options.push('--add-priority-node=116.203.126.14')
-  } else
-  if (config.blockchain.network == "staging") {
-    lokid_options.push('--stagenet')
+  if (!arrayHasClOption(args, '--testnet') && !arrayHasClOption(args, '--stagenet')) {
+    if (config.blockchain.network == "test") {
+      lokid_options.push('--testnet')
+    } else
+    if (config.blockchain.network == "demo") {
+      lokid_options.push('--testnet')
+      lokid_options.push('--add-priority-node=116.203.126.14')
+    } else
+    if (config.blockchain.network == "staging") {
+      lokid_options.push('--stagenet')
+    }
   }
 
-  // logical core count
-  let cpuCount = os.cpus().length
-  if (fs.existsSync('/sys/devices/system/cpu/online')) {
-    // 0-63
-    const cpuData = fs.readFileSync('/sys/devices/system/cpu/online')
-    cpuCount = parseInt(cpuData.toString().replace(/^0-/, '')) + 1
-  }
-  console.log('CPU Count', cpuCount)
-  // getconf _NPROCESSORS_ONLN
-  // /sys/devices/system/cpu/online
-  if (cpuCount > 16) {
-    lokid_options.push('--max-concurrency=16')
+  if (!arrayHasClOption(args, '--max-concurrency')) {
+    // logical core count
+    let cpuCount = os.cpus().length
+    if (fs.existsSync('/sys/devices/system/cpu/online')) {
+      // 0-63
+      const cpuData = fs.readFileSync('/sys/devices/system/cpu/online')
+      cpuCount = parseInt(cpuData.toString().replace(/^0-/, '')) + 1
+    }
+    console.log('CPU Count', cpuCount)
+    // getconf _NPROCESSORS_ONLN
+    // /sys/devices/system/cpu/online
+    if (cpuCount > 16) {
+        lokid_options.push('--max-concurrency=16')
+    }
   }
 
   // not 3.x
   if (!configUtil.isBlockchainBinary3X(config)) {
     // 4.x+
-    lokid_options.push('--storage-server-port', config.storage.port)
-    lokid_options.push('--service-node-public-ip', config.launcher.publicIPv4)
+    if (!arrayHasClOption(args, '--storage-server-port')) {
+      lokid_options.push('--storage-server-port', config.storage.port)
+    }
+    // make sure not passed in xmrOptions
+    //console.log('args', args)
+    if (!arrayHasClOption(args, '--service-node-public-ip')) {
+      //console.log('adding', config.launcher.publicIPv4)
+      lokid_options.push('--service-node-public-ip', config.launcher.publicIPv4)
+    }
   } else {
     console.log('3.x blockchain block binary detected')
   }
   // 6.x+
-  if (!configUtil.isBlockchainBinary3X(config) && !configUtil.isBlockchainBinary4Xor5X(config) && config.blockchain.qun_port) {
+  if (!configUtil.isBlockchainBinary3X(config) && !configUtil.isBlockchainBinary4Xor5X(config) && config.blockchain.qun_port && !arrayHasClOption(args, '--quorumnet-port')) {
     lokid_options.push('--quorumnet-port=' + config.blockchain.qun_port)
   }
 
   // copy CLI options to lokid
+  var normalizeArgs = []
+  function normalizeSet(key, value) {
+    //console.log('set?', key, ':', value)
+    // remove any previous setting
+    normalizeArgs = normalizeArgs.filter(item => {
+      var parts = item.replace(/^--/, '').split(/=/)
+      var newSet = key !== parts.shift()
+      if (!newSet) {
+        console.warn('Overriding earlier option of', item)
+      }
+      return newSet
+    })
+    // always add the new setting
+    normalizeArgs.push('--' + key + '=' + value)
+  }
+
+  // what if we normalize them into an array
+  var last = null
+  var all_options = lokid_options.concat(args)
+  //console.log('all_options', all_options)
+  for (var i in all_options) {
+    // should we prevent --non-interactive?
+    // probably not, if they want to run it that way, why not support it?
+
+    // FIXME: we just need to adjust internal config
+    // do we?
+    var arg = '' + all_options[i]
+    //console.log('arg', arg)
+
+    if (arg.match(/^--/)) {
+      // -- part
+      if (last != null) {
+        // if last was --!=
+        // now removeDashes is definitely not a value
+        // codify no value...
+        normalizeSet(last, '__REMOVE_ME__', false)
+        last = null
+      }
+      var removeDashes = arg.replace(/^--/, '')
+      if (arg.match(/=/)) {
+        var parts = removeDashes.split(/=/)
+        var key = parts.shift()
+        var value = parts.join('=')
+        normalizeSet(key, value, false)
+        last = null
+      } else {
+        // read next to make a decision
+        last = removeDashes
+      }
+    } else {
+      // hack to allow equal to be optional..
+      if (last != null) {
+        // should stitch together last = arg
+        normalizeSet(last, arg, true)
+      }
+      last = null
+    }
+  }
+  //console.log('last', last)
+  // and process them as such...
+  //console.log('normalized args', normalizeArgs)
+  lokid_options = normalizeArgs.map(str => str.replace('=__REMOVE_ME__', ''))
+  // well we used 2 buckets before
+  // so we didn't collide on current item
+  // if we use lokid_options then we're back to the parse problem...
+
+  /*
+  function removeSetOptions(key, value, spaceSepOption) {
+    console.log('removeSetOptions', key, value, spaceSepOption)
+    for(var j in lokid_options) {
+      var option = lokid_options[j] + '' // have to convert to string because number become numbers
+      // FIXME what about ' ' options?
+      console.log('checking', option, '==', key)
+      if ((option.match && option.match(/=/)) || ((value === true || spaceSepOption === true) && key === option)) {
+        var parts2 = option.split(/=/)
+        var option_key = parts2.shift()
+        console.log('checking key', option_key)
+        if (spaceSepOption) {
+          // skip if the j === lokid_options.length -1
+          console.log(j, '===', lokid_options.length - 1, lokid_options.length - 1 === +j)
+          if (lokid_options.length - 1 === +j) {
+            continue
+            // but isn't this always the case...
+          }
+        }
+        if (option_key == key) {
+          // warn if stomping an INI settings, set above...
+          // but we promote xmr options to INI/config...
+          // but we'll skip it now with arrayHasClOption
+          console.log('BLOCKCHAIN: Removing previous established option', option)
+          lokid_options.splice(j, 1)
+        }
+      }
+    }
+  }
+  var last = null
   for (var i in args) {
     // should we prevent --non-interactive?
     // probably not, if they want to run it that way, why not support it?
+
     // FIXME: we just need to adjust internal config
     var arg = args[i]
+    console.log('arg', arg)
+
+    if (arg.match(/^--/)) {
+      var removeDashes = arg.replace(/^--/, '')
+      if (arg.match(/=/)) {
+        var parts = removeDashes.split(/=/)
+        var key = parts.shift()
+        var value = parts.join('=')
+        removeSetOptions('--' + key, value, false)
+        last = null
+      } else {
+        // -- part
+        if (last != null) {
+          // if last was --!=
+          // now removeDashes is definitely not a value
+          removeSetOptions('--' + last, true, false)
+          last = null
+        }
+        // read next to make a decision
+        last = '--' + removeDashes
+      }
+    } else {
+      // hack to allow equal to be optional..
+      if (last != null) {
+        // should stitch together last = arg
+        removeSetOptions(last, arg, true)
+      }
+      last = null
+    }
+    */
+    /*
     if (arg.match(/=/)) {
       // assignment
       var parts = arg.split(/=/)
       var key = parts.shift()
+      // check to make sure it's not already added
       for(var j in lokid_options) {
         var option = lokid_options[j] + '' // have to convert to string because number become numbers
         if (option.match && option.match(/=/)) {
           var parts2 = option.split(/=/)
           var option_key = parts2.shift()
           if (option_key == key) {
+            // warn if stomping an INI settings, set above...
+            // but we promote xmr options to INI/config...
+            // but we'll skip it now with arrayHasClOption
             console.log('BLOCKCHAIN: Removing previous established option', option)
             lokid_options.splice(j, 1)
           }
         }
       }
     } else {
+      // arg doesn't contain =
+      // does it contain --
+      // does the next arg contain --
       for(var j in lokid_options) {
         var option = lokid_options[j]
         if (arg == option) {
@@ -1187,8 +1354,13 @@ function configureLokid(config, args) {
         }
       }
     }
+    */
+  /*
     lokid_options.push(args[i])
+    console.log('options', lokid_options)
   }
+  */
+  //console.log('final options', lokid_options)
 
   return {
     lokid_options: lokid_options,
@@ -1272,7 +1444,8 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       // 2020-10-12 03:11:00.660 I Failed to submit uptime proof: have not heard from the storage server recently. Make sure that it is running! It is required to run alongside the Loki daemon
 
       // we can get 3-4 before loki-storage pings a fresh restart
-      if (data.match(/Failed to submit uptime proof: have not heard from the storage server recently/)) {
+      var str = data.toString()
+      if (str.match(/Failed to submit uptime proof: have not heard from the storage server recently/)) {
         var ts = Date.now()
         lastLokiStorageContactFailures.push(ts)
         // loki-storage may not be running
@@ -1587,7 +1760,9 @@ function handleInput(line) {
 // and we'll recall this function if we need to update the config too...
 // also implies we'd need a reload other than HUP, USR1?
 function startLokid(config, args) {
+  //console.log('startLokid', args)
   var parameters = configureLokid(config, args)
+  //console.log('parameters', parameters)
   var lokid_options = parameters.lokid_options
   //console.log('configured ', config.blockchain.binary_path, lokid_options.join(' '))
 

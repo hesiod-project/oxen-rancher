@@ -1102,8 +1102,8 @@ function configureLokid(config, args) {
     lokid_options.push('--service-node')
   }
 
-  // 8.x
-  if (configUtil.isBlockchainBinary8X(config)) {
+  // 8.1.3+
+  if (configUtil.blockchainBinaryAfter813(config)) {
     // don't pass rpc-bind-ip or rpc-bind-port
 
     // if ip is not localhost, pass it to lokid

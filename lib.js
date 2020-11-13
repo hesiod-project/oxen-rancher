@@ -629,15 +629,19 @@ async function runNetworkRPCTest(config, cb) {
     id: "0",
     method: "llarp.version"
   }
-  const json = await httpPost(url, JSON.stringify(jsonPost))
-  console.log('json', json)
-  // 0.6.x support
-  if (json === 'bad json object') {
-    if (cb) cb(true)
-    return true
-  } else {
-    if (cb) cb(false)
-    return false
+  try {
+    const json = await httpPost(url, JSON.stringify(jsonPost))
+    console.log('json', json)
+    // 0.6.x support
+    if (json === 'bad json object') {
+      if (cb) cb(true)
+      return true
+    } else {
+      if (cb) cb(false)
+      return false
+    }
+  } catch(e) {
+    console.error('runNetworkRPCTest error', e)
   }
   //var data = JSON.parse(json)
   //console.log('result', data.result)
@@ -736,17 +740,21 @@ async function getLauncherStatus(config, lokinet, offlineMessage, cb) {
       checkDone('blockchain_rpc')
     }, 5000)
     // returns a promise now..
-    var p = httpPost(url, '{}', function(data) {
-      if (responded) return
-      responded = true
-      clearTimeout(blockchain_rpc_timer)
-      if (data === undefined) {
-        checklist.blockchain_rpc = offlineMessage
-      } else {
-        checklist.blockchain_rpc = 'running on ' + pids.runningConfig.blockchain.rpc_ip + ':' + pids.runningConfig.blockchain.rpc_port
-      }
-      checkDone('blockchain_rpc')
-    })
+    try {
+      var p = httpPost(url, '{}', function(data) {
+        if (responded) return
+        responded = true
+        clearTimeout(blockchain_rpc_timer)
+        if (data === undefined) {
+          checklist.blockchain_rpc = offlineMessage
+        } else {
+          checklist.blockchain_rpc = 'running on ' + pids.runningConfig.blockchain.rpc_ip + ':' + pids.runningConfig.blockchain.rpc_port
+        }
+        checkDone('blockchain_rpc')
+      })
+    } catch(e) {
+      console.error('getLauncherStatus err', e)
+    }
   }
   /*
   if (pids.runningConfig && pids.runningConfig.blockchain) {

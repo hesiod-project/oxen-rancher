@@ -797,7 +797,7 @@ function generateSerivceNodeINI(config, cb) {
     for (var i in done) {
       if (!done[i]) {
         ready = false
-        log(i, 'is not ready')
+        //log(i, 'is not ready')
         break
       }
     }
@@ -939,7 +939,7 @@ function generateSerivceNodeINI8(config, cb) {
     for (var i in done) {
       if (!done[i]) {
         ready = false
-        log(i, 'is not ready')
+        //log(i, 'is not ready')
         break
       }
     }
@@ -1076,7 +1076,7 @@ function generateClientINI(config, cb) {
     for (var i in done) {
       if (!done[i]) {
         ready = false
-        log(i, 'is not ready')
+        //log(i, 'is not ready')
         break
       }
     }
@@ -1179,6 +1179,12 @@ function launchLokinet(config, instance, cb) {
   }
   // command line options
   var cli_options = [networkConfig.ini_file]
+  if (networkConfig.requireModeParam) {
+    // runs in client mode by default
+    if (networkConfig.router) {
+      cli_options.push('-r')
+    }
+  }
   if (networkConfig.verbose) {
     cli_options.push('-v')
   }
@@ -1309,6 +1315,11 @@ function checkConfig(config) {
   //console.trace('lokinet checkConfig')
   if (config === undefined) config = {}
 
+  if (!config.router && config.client) {
+    console.error('lokinet::checkConfig - Lokinet not configured as client or router, one must be selected!')
+    process.exit(1);
+  }
+
   if (config.auto_config_test_ips === undefined) config.auto_config_test_ips = ['1.1.1.1', '72.21.211.176']
   if (config.auto_config_test_host === undefined) config.auto_config_test_host = 'www.imdb.com'
   if (config.auto_config_test_port === undefined) config.auto_config_test_port = 80
@@ -1385,24 +1396,28 @@ function waitForUrl(url, cb) {
 
 function waitForLokidUrl(url, cb) {
   // console.log('lokinet.js - waiting for', url)
-  lib.httpPost(url, '{}', function (data) {
-    // will be undefined if down (ECONNREFUSED)
-    // if success
-    // <html><head><title>Unauthorized Access</title></head><body><h1>401 Unauthorized</h1></body></html>
-    if (data) {
-      // console.log(url, 'is active')
-      return cb()
-    }
-    // no data could me 404
-    if (shuttingDown) {
-      //if (cb) cb()
-      log('not going to start lokinet, shutting down')
-      return
-    }
-    setTimeout(function () {
-      waitForLokidUrl(url, cb)
-    }, 1000)
-  })
+  try {
+    lib.httpPost(url, '{}', { quiet: true }, function (data) {
+      // will be undefined if down (ECONNREFUSED)
+      // if success
+      // <html><head><title>Unauthorized Access</title></head><body><h1>401 Unauthorized</h1></body></html>
+      if (data) {
+        // console.log(url, 'is active')
+        return cb()
+      }
+      // no data could me 404
+      if (shuttingDown) {
+        //if (cb) cb()
+        log('not going to start lokinet, shutting down')
+        return
+      }
+      setTimeout(function () {
+        waitForLokidUrl(url, cb)
+      }, 1000)
+    })
+  } catch(e) {
+    console.error('waitForLokidUrl err', e)
+  }
 }
 
 function startServiceNode(config, cb) {
@@ -1412,10 +1427,12 @@ function startServiceNode(config, cb) {
   if (version.match('lokinet-0.8.')) {
     console.log('Detected Lokinet-8.x')
     networkConfig.ini_writer = generateSerivceNodeINI8
+    networkConfig.requireModeParam = true
   } else {
     networkConfig.ini_writer = generateSerivceNodeINI
   }
   networkConfig.restart = true
+  networkConfig.router = true
   // FIXME: check for bootstrap stomp and strip it
   // only us lokinet devs will need to make our own seed node
   var configFile = preLaunchLokinet(networkConfig, function () {
@@ -1446,6 +1463,7 @@ function startServiceNode(config, cb) {
 
 function startClient(config, cb) {
   var networkConfig = config.network;
+  networkConfig.client = true
   checkConfig(networkConfig)
   if (networkConfig.bootstrap_path === undefined && networkConfig.connects === undefined &&
      networkConfig.bootstrap_url === undefined) {

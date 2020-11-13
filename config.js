@@ -17,6 +17,8 @@ function getDefaultConfig(entrypoint) {
       //binary_path: '/opt/loki-launcher/bin/lokid',
     },
   }
+  // publicIPv4 is used in lokid (not 3.x)
+  // for --service-node-public-ip
 
   // how do we detect installed by apt vs npm?
   // only npm can install to /usr/local/bin
@@ -200,10 +202,10 @@ function loadBlockchainConfigFile(xmrOptions, config, output) {
   if (xmrOptions['zmq-rpc-bind-ip']) {
     config.blockchain.zmq_ip = xmrOptions['zmq-rpc-bind-ip']
   }
-
   if (xmrOptions['rpc-bind-ip']) {
     config.blockchain.rpc_ip = xmrOptions['rpc-bind-ip']
   }
+
   if (xmrOptions['rpc-login']) {
     if (xmrOptions['rpc-login'].match(/:/)) {
       var parts = xmrOptions['rpc-login'].split(/:/)
@@ -284,6 +286,7 @@ function precheckConfig(config, args, debug) {
 var binary3xCache = null
 var binary4Xor5XCache = null
 var binary7xCache = null
+var binary8xCache = null
 
 function getLokidVersion(config) {
   if (config.blockchain.binary_path && fs.existsSync(config.blockchain.binary_path)) {
@@ -299,6 +302,7 @@ function getLokidVersion(config) {
       binary3xCache = lokid_version.match(/v3\.0/)?true:false
       binary4Xor5XCache = lokid_version.match(/v[54]\./)?true:false
       binary7xCache = lokid_version.match(/v7\./)?true:false
+      binary8xCache = lokid_version.match(/v8\./)?true:false
       return lokid_version
     } catch(e) {
       console.error('Cant detect lokid version', e)
@@ -309,6 +313,7 @@ function getLokidVersion(config) {
     binary3xCache = undefined
     binary4Xor5XCache = undefined
     binary7xCache = undefined
+    binary8xCache = undefined
   }
   return false;
 }
@@ -329,6 +334,12 @@ function isBlockchainBinary7X(config) {
   if (binary7xCache !== null) return binary7xCache
   getLokidVersion(config)
   return binary7xCache
+}
+
+function isBlockchainBinary8X(config) {
+  if (binary8xCache !== null) return binary8xCache
+  getLokidVersion(config)
+  return binary8xCache
 }
 
 function isStorageBinary2X(config) {
@@ -469,6 +480,54 @@ function setupInitialBlockchainOptions(xmrOptions, config) {
       config.blockchain.network = 'test'
     }
 }
+
+function blockchainIsDefaultRPCPort(config) {
+  if (config.blockchain.rpc_port === undefined || config.blockchain.rpc_port === '0') {
+    return true;
+  }
+  if (config.blockchain.network == 'test') {
+    return parseInt(config.blockchain.rpc_port) === 38157
+  } else
+  if (config.blockchain.network == 'demo') {
+    return parseInt(config.blockchain.rpc_port) === 38160
+  } else
+  if (config.blockchain.network == 'staging') {
+    return parseInt(config.blockchain.rpc_port) === 38057
+  }
+  return parseInt(config.blockchain.rpc_port) === 22023
+}
+
+function blockchainIsDefaultP2PPort(config) {
+  if (config.blockchain.p2p_port === undefined || config.blockchain.p2p_port === '0') {
+    return true;
+  }
+  if (config.blockchain.network == 'test') {
+    return parseInt(config.blockchain.p2p_port) === 38156
+  } else
+  if (config.blockchain.network == 'demo') {
+    return parseInt(config.blockchain.p2p_port) === 38159
+  } else
+  if (config.blockchain.network == 'staging') {
+    return parseInt(config.blockchain.p2p_port) === 38056
+  }
+  return parseInt(config.blockchain.p2p_port) === 22022
+}
+
+function blockchainIsDefaultQunPort(config) {
+  if (config.blockchain.qun_port === undefined || config.blockchain.qun_port === '0') {
+    return true;
+  }
+  if (config.blockchain.network == 'test') {
+    return parseInt(config.blockchain.qun_port) === 38159
+  } else
+  if (config.blockchain.network == 'staging') {
+    return parseInt(config.blockchain.qun_port) === 38059
+  }
+  return parseInt(config.blockchain.qun_port) === 22025
+}
+// storage does not have a default port or ip
+// zmq has been replaced with lmq
+// lmq defaults to 220220
 
 function checkBlockchainConfig(config) {
   // set default
@@ -921,5 +980,9 @@ module.exports = {
   isBlockchainBinary3X: isBlockchainBinary3X,
   isBlockchainBinary4Xor5X: isBlockchainBinary4Xor5X,
   isBlockchainBinary7X: isBlockchainBinary7X,
+  isBlockchainBinary8X: isBlockchainBinary8X,
   isStorageBinary2X: isStorageBinary2X,
+  blockchainIsDefaultRPCPort: blockchainIsDefaultRPCPort,
+  blockchainIsDefaultP2PPort: blockchainIsDefaultP2PPort,
+  blockchainIsDefaultQunPort: blockchainIsDefaultQunPort,
 }

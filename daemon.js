@@ -455,7 +455,8 @@ function launcherStorageServer(config, args, cb) {
             if (lastLokidContactFailures.length > 5) {
               lastLokidContactFailures.splice(-5)
             }
-            if (!shuttingDown) {
+            // exitRequested doesn't need to double up on the output in interactive-debug
+            if (!shuttingDown && !exitRequested) {
               console.log('STORAGE: can not contact blockchain, failure count', lastLokidContactFailures.length, 'first', parseInt((ts - lastLokidContactFailures[0]) / 1000) + 's ago')
             }
             // if the oldest one is not more than 180s ago
@@ -521,8 +522,10 @@ function launcherStorageServer(config, args, cb) {
 
   // don't hold up the exit too much
   let watchdog = null
+  // startupComplete will stop us
   let memoryWatcher = setInterval(function() {
     lib.runStorageRPCTest(lokinet, config, function(data) {
+      // start complete is complete when the RPC responds
       if (data !== undefined) {
         startupComplete()
       }
@@ -1099,13 +1102,41 @@ function configureLokid(config, args) {
     lokid_options.push('--service-node')
   }
 
-  // if ip is not localhost, pass it to lokid
-  if (config.blockchain.rpc_ip && config.blockchain.rpc_ip != '127.0.0.1') {
-    if (!arrayHasClOption(args, '--rpc-bind-ip')) {
-      lokid_options.push('--rpc-bind-ip=' + config.blockchain.rpc_ip)
+  // 8.x
+  if (configUtil.isBlockchainBinary8X(config)) {
+    // don't pass rpc-bind-ip or rpc-bind-port
+
+    // if ip is not localhost, pass it to lokid
+    if (config.blockchain.rpc_ip && config.blockchain.rpc_ip !== '127.0.0.1') {
+      if (!arrayHasClOption(args, '--rpc-public') && !arrayHasClOption(args, '--rpc-admin')) {
+        lokid_options.push('--rpc-public=' + config.blockchain.rpc_ip + ':' + config.blockchain.rpc_port)
+      }
+      if (!arrayHasClOption(args, '--confirm-external-bind')) {
+        lokid_options.push('--confirm-external-bind')
+      }
+    } else {
+      // rpc_ip is not set OR rpc_ip is 127.0.0.1
+      // if not using rpc-public, using rpc-admin
+
+      // make sure it's not overriddened by xmr cli args
+      if (!arrayHasClOption(args, '--rpc-public') && !arrayHasClOption(args, '--rpc-admin') &&
+          !configUtil.blockchainIsDefaultRPCPort(config)) {
+        lokid_options.push('--rpc-admin=' + config.blockchain.rpc_ip + ':' + config.blockchain.rpc_port)
+      }
     }
-    if (!arrayHasClOption(args, '--confirm-external-bind')) {
-      lokid_options.push('--confirm-external-bind')
+  } else {
+    // if ip is not localhost, pass it to lokid
+    if (config.blockchain.rpc_ip && config.blockchain.rpc_ip != '127.0.0.1') {
+      if (!arrayHasClOption(args, '--rpc-bind-ip')) {
+        lokid_options.push('--rpc-bind-ip=' + config.blockchain.rpc_ip)
+      }
+      if (!arrayHasClOption(args, '--confirm-external-bind')) {
+        lokid_options.push('--confirm-external-bind')
+      }
+    }
+    if (config.blockchain.rpc_port && !arrayHasClOption(args, '--rpc-bind-port') &&
+        configUtil.blockchainIsDefaultRPCPort(config)) {
+      lokid_options.push('--rpc-bind-port=' + config.blockchain.rpc_port)
     }
   }
   if (config.blockchain.p2p_ip && config.blockchain.p2p_ip !== '0.0.0.0'
@@ -1126,12 +1157,8 @@ function configureLokid(config, args) {
   if (config.blockchain.zmq_port && !arrayHasClOption(args, '--zmq-bind-port')) {
     lokid_options.push('--zmq-rpc-bind-port=' + config.blockchain.zmq_port)
   }
-  // FIXME: be nice to skip if it was the default...
-  // can we turn it off?
-  if (config.blockchain.rpc_port && !arrayHasClOption(args, '--rpc-bind-port')) {
-    lokid_options.push('--rpc-bind-port=' + config.blockchain.rpc_port)
-  }
-  if (config.blockchain.p2p_port && !arrayHasClOption(args, '--p2p-bind-port')) {
+  if (config.blockchain.p2p_port && !arrayHasClOption(args, '--p2p-bind-port')
+    && !configUtil.blockchainIsDefaultP2PPort(config)) {
     lokid_options.push('--p2p-bind-port=' + config.blockchain.p2p_port)
   }
   if (config.blockchain.data_dir&& !arrayHasClOption(args, '--data-dir')) {
@@ -1173,6 +1200,7 @@ function configureLokid(config, args) {
   if (!configUtil.isBlockchainBinary3X(config)) {
     // 4.x+
     if (!arrayHasClOption(args, '--storage-server-port')) {
+      // is always required in snode mode, there is no default
       lokid_options.push('--storage-server-port', config.storage.port)
     }
     // make sure not passed in xmrOptions
@@ -1184,8 +1212,10 @@ function configureLokid(config, args) {
   } else {
     console.log('3.x blockchain block binary detected')
   }
-  // 6.x+
-  if (!configUtil.isBlockchainBinary3X(config) && !configUtil.isBlockchainBinary4Xor5X(config) && config.blockchain.qun_port && !arrayHasClOption(args, '--quorumnet-port')) {
+  // 6.x+ (not 3,4,5)
+  if (!configUtil.isBlockchainBinary3X(config) &&
+      !configUtil.isBlockchainBinary4Xor5X(config) && config.blockchain.qun_port &&
+      !arrayHasClOption(args, '--quorumnet-port') && !configUtil.blockchainIsDefaultQunPort(config)) {
     lokid_options.push('--quorumnet-port=' + config.blockchain.qun_port)
   }
 
@@ -1256,110 +1286,6 @@ function configureLokid(config, args) {
   // so we didn't collide on current item
   // if we use lokid_options then we're back to the parse problem...
 
-  /*
-  function removeSetOptions(key, value, spaceSepOption) {
-    console.log('removeSetOptions', key, value, spaceSepOption)
-    for(var j in lokid_options) {
-      var option = lokid_options[j] + '' // have to convert to string because number become numbers
-      // FIXME what about ' ' options?
-      console.log('checking', option, '==', key)
-      if ((option.match && option.match(/=/)) || ((value === true || spaceSepOption === true) && key === option)) {
-        var parts2 = option.split(/=/)
-        var option_key = parts2.shift()
-        console.log('checking key', option_key)
-        if (spaceSepOption) {
-          // skip if the j === lokid_options.length -1
-          console.log(j, '===', lokid_options.length - 1, lokid_options.length - 1 === +j)
-          if (lokid_options.length - 1 === +j) {
-            continue
-            // but isn't this always the case...
-          }
-        }
-        if (option_key == key) {
-          // warn if stomping an INI settings, set above...
-          // but we promote xmr options to INI/config...
-          // but we'll skip it now with arrayHasClOption
-          console.log('BLOCKCHAIN: Removing previous established option', option)
-          lokid_options.splice(j, 1)
-        }
-      }
-    }
-  }
-  var last = null
-  for (var i in args) {
-    // should we prevent --non-interactive?
-    // probably not, if they want to run it that way, why not support it?
-
-    // FIXME: we just need to adjust internal config
-    var arg = args[i]
-    console.log('arg', arg)
-
-    if (arg.match(/^--/)) {
-      var removeDashes = arg.replace(/^--/, '')
-      if (arg.match(/=/)) {
-        var parts = removeDashes.split(/=/)
-        var key = parts.shift()
-        var value = parts.join('=')
-        removeSetOptions('--' + key, value, false)
-        last = null
-      } else {
-        // -- part
-        if (last != null) {
-          // if last was --!=
-          // now removeDashes is definitely not a value
-          removeSetOptions('--' + last, true, false)
-          last = null
-        }
-        // read next to make a decision
-        last = '--' + removeDashes
-      }
-    } else {
-      // hack to allow equal to be optional..
-      if (last != null) {
-        // should stitch together last = arg
-        removeSetOptions(last, arg, true)
-      }
-      last = null
-    }
-    */
-    /*
-    if (arg.match(/=/)) {
-      // assignment
-      var parts = arg.split(/=/)
-      var key = parts.shift()
-      // check to make sure it's not already added
-      for(var j in lokid_options) {
-        var option = lokid_options[j] + '' // have to convert to string because number become numbers
-        if (option.match && option.match(/=/)) {
-          var parts2 = option.split(/=/)
-          var option_key = parts2.shift()
-          if (option_key == key) {
-            // warn if stomping an INI settings, set above...
-            // but we promote xmr options to INI/config...
-            // but we'll skip it now with arrayHasClOption
-            console.log('BLOCKCHAIN: Removing previous established option', option)
-            lokid_options.splice(j, 1)
-          }
-        }
-      }
-    } else {
-      // arg doesn't contain =
-      // does it contain --
-      // does the next arg contain --
-      for(var j in lokid_options) {
-        var option = lokid_options[j]
-        if (arg == option) {
-          console.log('BLOCKCHAIN: Removing previous established option', option)
-          lokid_options.splice(j, 1)
-        }
-      }
-    }
-    */
-  /*
-    lokid_options.push(args[i])
-    console.log('options', lokid_options)
-  }
-  */
   //console.log('final options', lokid_options)
 
   return {
@@ -1431,6 +1357,9 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
     // why is the banner held back until we connect!?
     loki_daemon.stdout.on('data', (data) => {
       console.log(`blockchainRAW: ${data}`)
+
+      // downgrade lokid
+      // E Failed to parse service node data from blob: Invalid integer or enum value during deserialization
 
       // lns.db recreation
       // 2020-09-28 01:47:40.663	I Loading blocks into loki subsystems, scanning blockchain from height: 101250 to: 615676 (snl: 101250, lns: 496969)
@@ -1538,7 +1467,6 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
         disconnectAllClients()
       }
     }
-
     // if we have a handle on who we were...
     if (loki_daemon) {
       loki_daemon.killed = true
@@ -1571,8 +1499,13 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
 
 
   function flushOutput() {
+    if (shuttingDown) {
+      loki_daemon.outputFlushTimer = false
+      return
+    }
     if (!loki_daemon) {
       console.log('BLOCKCHAIN: flushOutput lost handle, stopping flushing.')
+      loki_daemon.outputFlushTimer = false
       return
     }
     // turn off when in prepare status...
@@ -1586,10 +1519,14 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
   // don't want to accidentally launch with prepare_reg broken
   loki_daemon.outputFlushTimer = setTimeout(flushOutput, 1000)
 
-  loki_daemon.getHeightTimer = null
+  loki_daemon.getHeightTimer = false
   loki_daemon.lastHeight = 0
   loki_daemon.heightStuckCounter = 0
   async function getHeight() {
+    if (shuttingDown) {
+      loki_daemon.getHeightTimer = false
+      return
+    }
     //console.log('daemon::getHeight - asking')
     const info = await lib.blockchainRpcGetNetInfo(config)
     //console.log('daemon::getHeight - info', info)
@@ -1621,9 +1558,7 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       }
       loki_daemon.lastHeight = info.result.height
     }
-    loki_daemon.getHeightTimer = setTimeout( () => {
-      getHeight()
-    }, 2 * 2 * 60 * 1000)
+    loki_daemon.getHeightTimer = setTimeout(getHeight, 2 * 2 * 60 * 1000)
   }
 
   // give it a minute to start up

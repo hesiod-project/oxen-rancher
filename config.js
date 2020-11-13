@@ -287,8 +287,10 @@ var binary3xCache = null
 var binary4Xor5XCache = null
 var binary7xCache = null
 var binary8xCache = null
+var versionCache = false
 
 function getLokidVersion(config) {
+  if (versionCache !== false) return versionCache
   if (config.blockchain.binary_path && fs.existsSync(config.blockchain.binary_path)) {
     try {
       var lokid_version = lib.getBlockchainVersion(config)
@@ -303,6 +305,7 @@ function getLokidVersion(config) {
       binary4Xor5XCache = lokid_version.match(/v[54]\./)?true:false
       binary7xCache = lokid_version.match(/v7\./)?true:false
       binary8xCache = lokid_version.match(/v8\./)?true:false
+      versionCache = lokid_version
       return lokid_version
     } catch(e) {
       console.error('Cant detect lokid version', e)
@@ -340,6 +343,21 @@ function isBlockchainBinary8X(config) {
   if (binary8xCache !== null) return binary8xCache
   getLokidVersion(config)
   return binary8xCache
+}
+
+function blockchainBinaryAfter813(config) {
+  const version = getLokidVersion(config)
+  if (binary8xCache) {
+    if (version.match(/v8.1.0/) || version.match(/v8.1.1/) || version.match(/v8.1.2/)) {
+      return false
+    }
+    return true
+  }
+  // 9x needs to return true
+  // FIXME: parse out the semvar string so we can use math
+  //if (version.match(/v9/) || version.match(/v10/) || version.match(/v11/)) {
+  //}
+  return false
 }
 
 function isStorageBinary2X(config) {
@@ -981,6 +999,7 @@ module.exports = {
   isBlockchainBinary4Xor5X: isBlockchainBinary4Xor5X,
   isBlockchainBinary7X: isBlockchainBinary7X,
   isBlockchainBinary8X: isBlockchainBinary8X,
+  blockchainBinaryAfter813: blockchainBinaryAfter813,
   isStorageBinary2X: isStorageBinary2X,
   blockchainIsDefaultRPCPort: blockchainIsDefaultRPCPort,
   blockchainIsDefaultP2PPort: blockchainIsDefaultP2PPort,

@@ -1135,7 +1135,7 @@ function configureLokid(config, args) {
       }
     }
     if (config.blockchain.rpc_port && !arrayHasClOption(args, '--rpc-bind-port') &&
-        configUtil.blockchainIsDefaultRPCPort(config)) {
+        !configUtil.blockchainIsDefaultRPCPort(config)) {
       lokid_options.push('--rpc-bind-port=' + config.blockchain.rpc_port)
     }
   }

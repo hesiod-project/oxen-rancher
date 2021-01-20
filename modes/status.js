@@ -35,7 +35,7 @@ async function status() {
       lokinet.portIsFree(config.blockchain.rpc_ip, config.blockchain.rpc_port, function(portFree) {
         if (!portFree) {
           console.log('')
-          console.log('There\'s a lokid that we\'re not tracking using our configuration (rpc_port is already in use). You likely will want to confirm and manually stop it before start using the launcher again.')
+          console.log('There\'s a oxend that we\'re not tracking using our configuration (rpc_port is already in use). You likely will want to confirm and manually stop it before start using the launcher again.')
           // Exiting...
           console.log('')
           if (pids.err == 'noFile') {

@@ -248,8 +248,8 @@ function precheckConfig(config, args, debug) {
   if (config.launcher.prefix) {
     config.launcher.prefix = config.launcher.prefix.replace(/\/$/, '')
     if (config.launcher.var_path === undefined) config.launcher.var_path = config.launcher.prefix + '/var'
-    if (config.blockchain.binary_path === undefined) config.blockchain.binary_path = config.launcher.prefix + '/bin/lokid'
-    if (config.storage.binary_path === undefined) config.storage.binary_path = config.launcher.prefix + '/bin/loki-storage'
+    if (config.blockchain.binary_path === undefined) config.blockchain.binary_path = config.launcher.prefix + '/bin/oxend'
+    if (config.storage.binary_path === undefined) config.storage.binary_path = config.launcher.prefix + '/bin/oxen-storage'
     if (config.network.binary_path === undefined) config.network.binary_path = config.launcher.prefix + '/bin/lokinet'
   }
 
@@ -308,7 +308,7 @@ function getLokidVersion(config) {
       versionCache = lokid_version
       return lokid_version
     } catch(e) {
-      console.error('Cant detect lokid version', e)
+      console.error('Cant detect oxend version', e)
       // can't hurt to retry I guess, maybe it is a temp problem
       //binary3xCache = null
     }
@@ -372,7 +372,7 @@ function checkLauncherConfig(config) {
 
   // in case they have a config file with no launcher section but had a blockchain section with this missing
   // had to move this from blockchain to launcher, so we can do the version check
-  if (config.blockchain.binary_path === undefined) config.blockchain.binary_path = '/opt/loki-launcher/bin/lokid'
+  if (config.blockchain.binary_path === undefined) config.blockchain.binary_path = '/opt/loki-launcher/bin/oxend'
 
   // only thing you can't turn off is blockchain (lokid)
   // if you have storage without lokinet, it will use the public IP to serve on
@@ -548,6 +548,7 @@ function blockchainIsDefaultQunPort(config) {
 // lmq defaults to 220220
 
 function checkBlockchainConfig(config) {
+
   // set default
   // set network so we can run toLowerCase on it
   if (config.blockchain.network === undefined) {
@@ -663,7 +664,7 @@ function checkNetworkConfig(config) {
 // we need lokid_key configured for status mode
 function checkStorageConfig(config) {
   if (!config.storage.enabled) return
-  if (config.storage.binary_path === undefined) config.storage.binary_path = '/opt/loki-launcher/bin/loki-storage'
+  if (config.storage.binary_path === undefined) config.storage.binary_path = '/opt/loki-launcher/bin/oxen-storage'
 
   if (config.storage.testnet === undefined) {
     config.storage.testnet = config.blockchain.network == "test" || config.blockchain.network == "demo"

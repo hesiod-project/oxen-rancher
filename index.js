@@ -59,12 +59,17 @@ async function continueStart() {
   // centos8
   stripArg('/bin/node')
   stripArg('/bin/loki-launcher')
+  stripArg('/bin/oxen-rancher')
   stripArg(__filename) // will just be index.js
   stripArg('loki-launcher')
+  stripArg('oxen-rancher')
   stripArg('/usr/bin/loki-launcher')
   stripArg('/usr/local/bin/loki-launcher')
+  stripArg('/usr/bin/oxen-rancher')
+  stripArg('/usr/local/bin/oxen-rancher')
   // how is this not __filename??
   stripArg('/usr/lib/node_modules/loki-launcher/index.js')
+  stripArg('/usr/lib/node_modules/oxen-rancher/index.js')
   //console.debug('index filename:', __filename)
   //console.debug('Launcher arguments:', args)
 
@@ -97,6 +102,12 @@ async function continueStart() {
   var disk_config = {}
   var config = configUtil.getDefaultConfig(__filename)
   var config_type = 'default'
+  if (fs.existsSync('/etc/oxen-rancher/rancher.ini')) {
+    const ini_bytes = fs.readFileSync('/etc/oxen-rancher/rancher.ini')
+    disk_config = ini.iniToJSON(ini_bytes.toString())
+    config = disk_config
+    config_type = 'etc'
+  } else
   if (fs.existsSync('/etc/loki-launcher/launcher.ini')) {
     const ini_bytes = fs.readFileSync('/etc/loki-launcher/launcher.ini')
     disk_config = ini.iniToJSON(ini_bytes.toString())
@@ -113,6 +124,7 @@ async function continueStart() {
   }
   config.type = config_type
   config.entrypoint = __filename
+
   const lib = require(__dirname + '/lib')
 
   //console.log('Launcher config:', config)
@@ -136,9 +148,9 @@ async function continueStart() {
   }
   if (showVersionCommands.includes(mode)) {
     if (useGitVersion) {
-      console.log('Loki-Launcher version', VERSION.toString())
+      console.log('Oxen-Rancher version', VERSION.toString())
     } else {
-      console.log('Loki-Launcher version', VERSION.toString())
+      console.log('Oxen-Rancher version', VERSION.toString())
     }
   }
 
@@ -355,6 +367,7 @@ async function continueStart() {
       console.log(keys)
     break;
     // no restart because we don't want people croning it
+    case 'sotp':
     case 'stop': // official
       // maybe use the client to see what's taking lokid a while...
       //console.log('Getting launcher state')
@@ -394,7 +407,7 @@ async function continueStart() {
           if (!portFree) {
             const portPid = await lib.findPidByPort(config.blockchain.rpc_port)
             console.log('')
-            console.log(`There's a lokid on ${portPid} that we're not tracking using our configuration (rpc_port is already in use). You likely will want to confirm and manually stop it before start using the launcher again.`);
+            console.log(`There's a oxend on ${portPid} that we're not tracking using our configuration (rpc_port is already in use). You likely will want to confirm and manually stop it before start using the launcher again.`);
             console.log('')
           }
         })
@@ -510,12 +523,12 @@ async function continueStart() {
       // commit it to disk if it doesn't exist
     break;
     case 'config-view': // official
-      console.log('Loki-launcher is in', __dirname)
+      console.log('Oxen-Rancher is in', __dirname)
       // FIXME: prettyPrint
-      console.log('Launcher stored-config:', config)
+      console.log('Rancher stored-config:', config)
       var pids = lib.getPids(config)
       if (pids && pids.runningConfig) {
-        console.log('Launcher running-config:', pids.runningConfig)
+        console.log('Rancher running-config:', pids.runningConfig)
       }
     break;
     case 'config-edit': // official
@@ -570,6 +583,21 @@ async function continueStart() {
         require(__dirname + '/modes/check-systemd').launcherLogs(config)
       } else {
         console.log('requires one of the following parameters: enable or log')
+      }
+    break;
+    case 'debs':
+      var type = findFirstArgWithoutDash()
+      if (type === 'installed') {
+        console.log(require(__dirname + '/modes/debs.js').areInstalled())
+      } else
+      if (type === 'install' || type === 'enable') {
+        await require(__dirname + '/modes/debs.js').enable(config)
+      } else
+      if (type === 'disable') {
+        // FIXME: going to need to know user
+        await require(__dirname + '/modes/debs.js').disable(config)
+        //
+        //await doInstallUpgrade(user, config, true)
       }
     break;
     case 'chown':
@@ -694,16 +722,16 @@ async function continueStart() {
       console.log(`
   Unknown command [${mode}]
 
-  loki-launcher is manages the Loki.network suite of software primarily for service node operation
+  oxen-rancher is manages the Loki.network suite of software primarily for service node operation
   Usage:
-    [sudo] loki-launcher [command] [OPTIONS]
+    [sudo] oxen-rancher [command] [OPTIONS]
 
     Commands:
       start       start the loki suite with OPTIONS
       stop        stops the launcher running in the background
       status      get the current loki suite status, can optionally provide:
                     blockchain - get blockchain status
-      client      connect to lokid
+      client      connect to oxend
       prequal     prequalify your server for service node operation
       config-view print out current configuration information
       versions    show installed versions of Loki software
@@ -715,7 +743,7 @@ async function continueStart() {
                             that you need to migrate this snode to another host
       import FILENAME     try to import this exported tarball to this host
       download-blockchain deletes current blockchain and downloads a fresh sync'd copy
-                            usually much faster than a normal lokid sync takes
+                            usually much faster than a normal oxend sync takes
 
     Commands that require root/sudo:
       download-binaries - download the latest version of the loki software suite

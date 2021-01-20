@@ -114,7 +114,7 @@ function start(user, dir, config) {
           fs.chownSync(config.blockchain.binary_path, uid, 0)
           fs.chmodSync(config.blockchain.binary_path, 0o755)
         } else {
-          console.warn('Warning your lokid does not exist at', config.blockchain.binary_path, ', recommend running download-binaries or obtain them off github')
+          console.warn('Warning your oxend does not exist at', config.blockchain.binary_path, ', recommend running download-binaries or obtain them off github')
         }
         if (config.network.binary_path) {
           if (fs.existsSync(config.network.binary_path)) {
@@ -129,7 +129,7 @@ function start(user, dir, config) {
             fs.chownSync(config.storage.binary_path, uid, 0)
             fs.chmodSync(config.storage.binary_path, 0o755)
           } else {
-            console.warn('Warning your loki-storage does not exist at', config.storage.binary_path, ', recommend running download-binaries or obtain them off github')
+            console.warn('Warning your oxen-storage does not exist at', config.storage.binary_path, ', recommend running download-binaries or obtain them off github')
           }
         }
         // config.launcher.var_path doesn't always exist yet

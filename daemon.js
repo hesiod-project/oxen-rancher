@@ -331,8 +331,8 @@ function launcherStorageServer(config, args, cb) {
       console.error('')
       var ourlimits = getPidLimit(process.pid)
       console.warn('')
-      console.warn('node limits', ourlimits, 'loki-storage limits', limits)
-      console.warn('There maybe not enough file descriptors to run loki-storage, you may want to look at increasing it')
+      console.warn('node limits', ourlimits, 'oxen-storage limits', limits)
+      console.warn('There maybe not enough file descriptors to run oxen-storage, you may want to look at increasing it')
       console.warn('')
       // console.error('Not enough file descriptors to run loki-storage, shutting down')
       // console.error("put LimitNOFILE=16384 in your [Service] section of /etc/systemd/system/lokid.service")
@@ -1387,14 +1387,14 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
           lastLokiStorageContactFailures.splice(-20)
         }
         if (!shuttingDown) {
-          console.log('BLOCKCHAIN: Have not heard from loki-storage, failure count', lastLokidContactFailures.length, 'first', parseInt((ts - lastLokiStorageContactFailures[0]) / 1000) + 's ago')
+          console.log('BLOCKCHAIN: Have not heard from oxen-storage, failure count', lastLokidContactFailures.length, 'first', parseInt((ts - lastLokiStorageContactFailures[0]) / 1000) + 's ago')
         }
         if (lastLokiStorageContactFailures.length == 20 && ts - lastLokiStorageContactFailures[0] < 900 * 1000) {
           // now it's a race, between us detect lokid shutting down
           // and us trying to restart it...
           // mainly will help deadlocks
           if (!exitRequested) { // user typed exit
-            console.log('we should restart loki-storage');
+            console.log('we should restart oxen-storage');
             //(config);
           }
         }

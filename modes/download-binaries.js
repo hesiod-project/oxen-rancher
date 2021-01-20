@@ -155,7 +155,7 @@ function downloadArchive(url, config, options) {
           console.log(filename, 'successfully extracted to /opt/loki-launcher/bin', getFileSizeSync('/opt/loki-launcher/bin/' + filename), 'bytes extracted.')
           console.log('Running version check..')
           var option = '-version'
-          if (filename == 'loki-storage') {
+          if (filename == 'oxen-storage') {
             option = 'v'
           }
           try {
@@ -355,21 +355,21 @@ function start(config, options) {
     baseOptions[options.prerel ? 'prereleaseOnly': 'notPrerelease'] = true
 
     if (config.blockchain.network == 'test' || config.blockchain.network == 'demo' || config.blockchain.network == 'staging') {
-      downloadGithubRepo('https://api.github.com/repos/loki-project/loki-network/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
+      downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-network/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
         start_retries = 0
         lokinet.checkConfig(config) // setcap
-        downloadGithubRepo('https://api.github.com/repos/loki-project/loki-storage-server/releases', { filename: 'loki-storage', useDir: false, ...baseOptions }, config, lib.getStorageVersion(config), function() {
+        downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-storage-server/releases', { filename: 'loki-storage', useDir: false, ...baseOptions }, config, lib.getStorageVersion(config), function() {
           start_retries = 0
-          downloadGithubRepo('https://api.github.com/repos/loki-project/loki-core/releases', { filename: 'lokid', useDir: true, ...baseOptions }, config, lib.getBlockchainVersion(config), function() {
+          downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-core/releases', { filename: 'lokid', useDir: true, ...baseOptions }, config, lib.getBlockchainVersion(config), function() {
             resolve()
           })
         })
       })
     } else {
-      downloadGithubRepo('https://api.github.com/repos/loki-project/loki-network/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
+      downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-network/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
         start_retries = 0
         lokinet.checkConfig(config) // setcap
-        downloadGithubRepo('https://api.github.com/repos/loki-project/loki-storage-server/releases', { filename: 'loki-storage', useDir: false, ...baseOptions }, config, lib.getStorageVersion(config), function() {
+        downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-storage-server/releases', { filename: 'oxen-storage', useDir: true, ...baseOptions }, config, lib.getStorageVersion(config), function() {
           start_retries = 0
           /*
           if (xenial_hack) {
@@ -377,7 +377,7 @@ function start(config, options) {
             downloadGithubRepo('https://api.github.com/repos/loki-project/loki/releases/19352901', { filename: 'lokid', useDir: true, notPrerelease: true }, config)
           } else {
           */
-          downloadGithubRepo('https://api.github.com/repos/loki-project/loki-core/releases', { filename: 'lokid', useDir: true, ...baseOptions }, config, lib.getBlockchainVersion(config), function() {
+          downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-core/releases', { filename: 'oxend', useDir: true, ...baseOptions }, config, lib.getBlockchainVersion(config), function() {
             // can't run fix-perms without knowing the user
             resolve()
           })

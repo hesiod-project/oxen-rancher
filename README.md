@@ -1,3 +1,5 @@
+# Oxen Rancher
+Used to be
 ```
         .o0l.
        ;kNMNo.
@@ -18,13 +20,13 @@ dNMMM0,   ;KMMXo.           ,KMx.        .oNNx'      .dNWx.  :NMo .cKWk;     dMW
 
 # Requirements
 
-- [nodejs](https://nodejs.org/en/) versions 8.x to 12.x are supported
+- [nodejs](https://nodejs.org/en/) versions 8.x to 14.x are supported
 - [npm](https://www.npmjs.com/get-npm) usually installed with nodejs (only for distribution and easy install of this software, we do not use ANY external NPMs for security reasons)
 - Linux (though macos does works and Windows kind of works)
 - xz (xz-utils apt package) to be able to download and extract updated Linux binaries
 - setcap (apt: libcap2-bin, rpm: libcap) to be enable lokinet to not need to run as root on Linux
 
-# Why use the launcher over DEBs
+# Why use the rancher/launcher over DEBs
 The goal of the launcher is to make it easier to run a service node, however the DEBs installation and upgrade process can be much easier if you're running a debian-based OS. However we do have some additional advantages:
 - Safer, we have additional checks in configuration, like to make sure you don't create port conflicts. We also have other checks that can detect unwanted patterns of behavior between apps and be able to take action
 - Easier config management, one config file to manage all 3 binaries, also reduces the chance of you having to resolve config conflicts during upgrades
@@ -32,70 +34,70 @@ The goal of the launcher is to make it easier to run a service node, however the
 - NAT support, Launcher automatically configures your outgoing interface and public IP. DEBs you have to manually set up your network interface and public ip. Neither will help you set up port forwarding though.
 - Prequal tool, know for sure your situation meets our minimum requirements
 - Easy to downgrade path: if an upgrade is causing you problems, you can manually pull older releases off github and replace the binaries in /opt/loki-launcher/bin and simply restart the launcher with the older binary until your node is stable.
-- Diveristy of the network, in the highly unlikely event that Debian ever gets a serious bug, we want the service node network to be diverse enough to not be largely effective. Being able to support multiple operating systems is good for the Loki ecosystem.
-- Robust distribution system: Launcher relies on Microsoft/GitHub infrastructure, the DEBs are ran by our developer on his server. You could argue Microsoft/GitHub has more people keeping an eye on security and availability of their system. (And while we use NPM to distribute loki-launcher we do not use any NPM modules in this project)
-- Interactive client sessions, so you don't have lokid start up delays for each command you want to run
+- Diveristy of the network, in the highly unlikely event that Debian ever gets a serious bug, we want the service node network to be diverse enough to not be largely effective. Being able to support multiple operating systems is good for the Oxen(Loki) ecosystem.
+- Robust distribution system: Launcher relies on Microsoft/GitHub infrastructure, the DEBs are ran by our developer on his server. You could argue Microsoft/GitHub has more people keeping an eye on security and availability of their system. (And while we use NPM to distribute oxen-rancher we do not use any NPM modules in this project)
+- Interactive client sessions, so you don't have oxend start up delays for each command you want to run
 - Unified subsystem reporting, get the status or versions of all 3 subsystems (blockchain, storage, network) from one command
 - Works on Ubuntu 19.x, DEBs only work with 18LTS and 20LTS (Xenial 16.x was deprecated in a way to only support the debs and not the launcher)
 
-Launcher is maintained at cost of the Loki Foundation and if it's not found to be of use, maybe unfunded. Please consider supporting this great tool by using it.
+Launcher was maintained at cost of the Loki Foundation and was unfunded. Please consider supporting this great tool by using it.
 
 # How to do a fresh service node install
 
-This will use npm to install the launcher
+This will use npm to install the rancher
 
-`sudo npm install -g loki-launcher`
+`sudo npm install -g oxen-rancher`
 
-This will download and install the Loki binaries for you if you don't already have them
+This will download and install the Oxen binaries for you if you don't already have them
 
-`sudo loki-launcher download-binaries`
+`sudo oxen-rancher download-binaries`
 
 This will create any needed directories and make sure everything has the proper permissions to run as a specified user such as `snode` in this example
 
-`sudo loki-launcher set-perms snode`
+`sudo oxen-rancher set-perms snode`
 
 Now make sure sure you running the following commands as the user specified or you may run into permission problems (EPERM).
 
 After it's installed, you can ask to prequalify your server to be a service node
 
-`loki-launcher prequal`
+`oxen-rancher prequal`
 
 # How to use without systemd
 
-`loki-launcher start`
+`oxen-rancher start`
 
 Running it once should start the suite of services into the background or give you a message why it can't. This isn't recommended for long term uses as there is nothing to restart launcher if it dies/exits.
 
-Running `loki-launcher client`, will give you an interactive terminal to lokid (the copy running from the current directory if you have multiple).
+Running `oxen-rancher client`, will give you an interactive terminal to oxend (the copy running from the current directory if you have multiple).
 `exit` will stop your service node. If you just want to exit the interactive terminal, please use `ctrl-c`.
 
-You can pass most [command line parameters](https://lokidocs.com/Advanced/lokid/) that you would give to lokid to `loki-launcher start`
+You can pass most [command line parameters](https://lokidocs.com/Advanced/lokid/) that you would give to oxend to `oxen-rancher start`
 
-You can make a launcher config file in /etc/loki-launcher/launcher.ini and change various settings, [Check our wiki](https://github.com/loki-project/loki-launcher/wiki/Launcher.ini-configuration-documentation) for details on options.
+You can make a launcher config file in /etc/oxen-rancher/rancher.ini and change various settings, [Check our wiki](https://github.com/hesiod-project/oxen-rancher/wiki/Launcher.ini-configuration-documentation) for details on options.
 
-# How to keep the launcher up to date
+# How to keep the rancher up to date
 
-## Update your launcher without systemd
+## Update your rancher without systemd
 
-Stop your service node if it's running (you can use `loki-launcher status` to check)
+Stop your service node if it's running (you can use `oxen-rancher status` to check)
 
-`loki-launcher stop`
+`oxen-rancher stop`
 
 Update the launcher
 
-`sudo npm install -g loki-launcher`
+`sudo npm install -g oxen-rancher`
 
 And be sure to make sure you restart your service node (if it's staked) by
 
-`loki-launcher start`
+`oxen-rancher start`
 
-## Get the latest Loki software versions
+## Get the latest Oxen software versions
 
-`sudo loki-launcher download-binaries`
+`sudo oxen-rancher download-binaries`
 
 And be sure to make sure you restart your service node (if it's staked) by
 
-`loki-launcher start`
+`oxen-rancher start`
 
 ## Other
 
@@ -119,15 +121,15 @@ then
 
 # Software the launcher manages
 
-- [lokid](https://github.com/loki-project/loki-core)
-- [lokinet](https://github.com/loki-project/loki-network)
-- [loki-storage](https://github.com/loki-project/loki-storage-server)
+- [oxend](https://github.com/oxen-io/loki-core)
+- [lokinet](https://github.com/oxen-io/loki-network)
+- [oxen-storage](https://github.com/oxen-io/loki-storage-server)
 
-To get the required software you can run `loki-launcher download-binaries` and they will be placed in `/opt/loki-launcher/bin`
+To get the required software you can run `oxen-rancher download-binaries` and they will be placed in `/opt/loki-launcher/bin`
 
 or
 
-You can download the loki binaries (faster) from each above page's release section
+You can download the oxen binaries (faster) from each above page's release section
 
 or
 
@@ -137,7 +139,7 @@ And if you don't have the dependencies to build from source check out [contrib/d
 
 # Release Notes
 
-Changelog items are now [available here](https://github.com/loki-project/loki-launcher/releases)
+Changelog items are now [available here](https://github.com/hesiod-project/oxen-rancher/releases)
 
 # Donations
 

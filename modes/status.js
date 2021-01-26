@@ -24,7 +24,7 @@ async function status() {
     var pid = lib.areWeRunning(config)
     // if no pids.json and somehow we're running? (pids.json got deleted)
     if (pids.err == 'noFile'  && pid) {
-      console.log('Launcher is running with no', config.launcher.var_path + '/pids.json, giving it a little nudge, please run status again, current results maybe incorrect')
+      console.log('Rancher is running with no', config.launcher.var_path + '/pids.json, giving it a little nudge, please run status again, current results maybe incorrect')
       process.kill(pid, 'SIGHUP')
     } else if (pids.err && pids.err != 'noFile') {
       console.error('error reading file', config.launcher.var_path + '/pids.json', pids.err)
@@ -35,7 +35,7 @@ async function status() {
       lokinet.portIsFree(config.blockchain.rpc_ip, config.blockchain.rpc_port, function(portFree) {
         if (!portFree) {
           console.log('')
-          console.log('There\'s a oxend that we\'re not tracking using our configuration (rpc_port is already in use). You likely will want to confirm and manually stop it before start using the launcher again.')
+          console.log('There\'s a oxend that we\'re not tracking using our configuration (rpc_port is already in use). You likely will want to confirm and manually stop it before start using the rancher again.')
           // Exiting...
           console.log('')
           if (pids.err == 'noFile') {
@@ -54,7 +54,7 @@ async function status() {
   // if the launcher is running
   if (running.launcher) {
   } else {
-    console.log('Launcher is not running')
+    console.log('Rancher is not running')
     // FIXME: may want to check on child daemons to make sure they're not free floating?
   }
   // launcher will always be imperfect

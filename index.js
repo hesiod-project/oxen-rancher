@@ -407,7 +407,7 @@ async function continueStart() {
           if (!portFree) {
             const portPid = await lib.findPidByPort(config.blockchain.rpc_port)
             console.log('')
-            console.log(`There's a oxend on ${portPid} that we're not tracking using our configuration (rpc_port is already in use). You likely will want to confirm and manually stop it before start using the launcher again.`);
+            console.log(`There's a oxend on ${portPid} that we're not tracking using our configuration (rpc_port is already in use). You likely will want to confirm and manually stop it before start using the rancher again.`);
             console.log('')
           }
         })
@@ -736,7 +736,7 @@ async function continueStart() {
       config-view print out current configuration information
       versions    show installed versions of Loki software
       systemd     requires one of the following options
-                    log - show systemd launcher log file
+                    log - show systemd rancher log file
       keys        get your service node public keys
       show-quorum tries to give an estimate to the next time you're tested
       export [FILENAME]   try to create a compressed tarball with all the snode files

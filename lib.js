@@ -394,7 +394,7 @@ function areWeRunning(config) {
 
 function setStartupLock(config) {
   //console.log('SETTING STARTUP LOCK')
-  fs.writeFileSync(config.launcher.var_path + '/launcher.pid', process.pid)
+  fs.writeFileSync(config.launcher.var_path + '/launcher.pid', '' + process.pid)
 }
 
 function clearPids(config) {

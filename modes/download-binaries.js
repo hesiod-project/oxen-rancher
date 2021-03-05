@@ -50,7 +50,7 @@ function downloadGithubFile(dest, url, cb) {
     path: urlDetails.path,
     timeout: 5000,
     headers: {
-      'User-Agent': 'Mozilla/5.0 Loki-launcher/' + VERSION
+      'User-Agent': 'Mozilla/5.0 Oxen-rancher/' + VERSION
     }
   }, (resp) => {
     //log('httpGet setting up handlers')
@@ -99,7 +99,7 @@ function downloadArchive(url, config, options) {
   var filename = options.filename
   console.log('Downloading', filename, 'binaries from', url)
   console.log('')
-  var tmpPath = '/tmp/loki-launcher_binaryDownload-' + lokinet.randomString(8) + ext
+  var tmpPath = '/tmp/oxen-rancher_binaryDownload-' + lokinet.randomString(8) + ext
   //console.log('downloading to tmp file', tmpPath)
   downloadGithubFile(tmpPath, url, function(result) {
     if (result !== undefined) {
@@ -269,7 +269,7 @@ async function downloadGithubRepo(github_url, options, config, curVerStr, cb) {
     else
     if (os.platform() == 'linux') search = 'linux'
     else {
-      console.error('Sorry, platform', os.platform(), 'is not currently supported, please let us know you would like us to support this platform by opening an issue on github: https://github.com/loki-project/loki-launcher/issues')
+      console.error('Sorry, platform', os.platform(), 'is not currently supported, please let us know you would like us to support this platform by opening an issue on github: https://github.com/hesiod-project/oxen-rancher/issues')
       process.exit(1)
     }
     var platform = new RegExp(process.arch, 'i')

@@ -1451,7 +1451,7 @@ function startServiceNode(config, cb) {
       url += networkConfig.lokid.rpc_user+':'+networkConfig.lokid.rpc_pass+'@'
     }
     url += networkConfig.lokid.rpc_ip+':'+networkConfig.lokid.rpc_port+'/json_rpc'
-    log('lokinet waiting for lokid RPC server')
+    log('lokinet waiting for oxend RPC server')
 
     // 8.x requires a POST and post works with older versions
     waitForLokidUrl(url, function () {

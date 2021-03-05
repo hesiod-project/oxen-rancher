@@ -42,7 +42,8 @@ dNMMM0,   ;KMMXo.           ,KMx.        .oNNx'      .dNWx.  :NMo .cKWk;     dMW
 
 function getLogo(str) {
   //'L A U N C H E R   v e r s i o n   v version'
-  return logo.replace(/__LABEL__/, str)
+  //return logo.replace(/__LABEL__/, str)
+  return str;
 }
 
 function falsish(val) {
@@ -96,10 +97,10 @@ Cant detect blockchain version Error: Command failed: /opt/loki-launcher/bin/lok
       */
       // stderr seems to be already echo'd
       if (e.code === 'EACCES') {
-        console.error("Cannot detect blockchain version. Your current lokid binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+        console.error("Cannot detect blockchain version. Your current oxend binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
       } else
       if (e.signal === 'SIGILL') {
-        console.error("Cannot detect blockchain version. Your current lokid binary does not support your CPU")
+        console.error("Cannot detect blockchain version. Your current oxend binary does not support your CPU")
       } else {
         // not a crash but bad exit..
         if (e.signal === null && e.status === 1 && e.error === null) {
@@ -148,7 +149,7 @@ function getStorageVersion(config) {
       //console.log('storage_version', storage_version)
       const lines = storage_version.split(/\n/)
       //console.log('storage_version', lines.length, lines)
-      const foundVer = lines.filter(line => line.match(/Loki Storage Server v/))
+      const foundVer = lines.filter(line => line.match(/Oxen Storage Server v/))
       if (!foundVer.length) {
         console.error('LIB: could not find version line', lines)
         return storage_version
@@ -174,10 +175,10 @@ function getStorageVersion(config) {
       */
     } catch(e) {
       if (e.code === 'EACCES') {
-        console.error("Cannot detect storage version. Your current loki-storage binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+        console.error("Cannot detect storage version. Your current oxen-storage binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
       } else
       if (e.signal === 'SIGILL') {
-        console.error("Cannot detect storage version. Your current loki-storage binary does not support your CPU")
+        console.error("Cannot detect storage version. Your current oxen-storage binary does not support your CPU")
       } else {
         console.error("Cannot detect storage version", e)
       }
@@ -393,7 +394,7 @@ function areWeRunning(config) {
 
 function setStartupLock(config) {
   //console.log('SETTING STARTUP LOCK')
-  fs.writeFileSync(config.launcher.var_path + '/launcher.pid', process.pid)
+  fs.writeFileSync(config.launcher.var_path + '/launcher.pid', '' + process.pid)
 }
 
 function clearPids(config) {

@@ -1297,6 +1297,9 @@ var loki_daemon
 var inPrepareReg = false
 var savePidConfig = {}
 var lastLokiStorageContactFailures = []
+var loadingSubsystems = false
+var syncingChain = false
+
 function launchLokid(binary_path, lokid_options, interactive, config, args, cb) {
   if (shuttingDown) {
     //if (cb) cb()
@@ -1358,22 +1361,62 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
     loki_daemon.stdout.on('data', (data) => {
       console.log(`blockchainRAW: ${data}`)
 
+      var str = data.toString()
+
       // downgrade lokid
       // E Failed to parse service node data from blob: Invalid integer or enum value during deserialization
+      if (str.match(/E Failed to parse service node data from blob: Invalid integer or enum value during deserialization/)) {
+        console.log('oxend downgrade?')
+      }
 
       // lns.db recreation
       // 2020-09-28 01:47:40.663	I Loading blocks into loki subsystems, scanning blockchain from height: 101250 to: 615676 (snl: 101250, lns: 496969)
+      if (str.match(/subsystems, scanning blockchain from height/)) {
+        console.log('blockchain subsystem loading')
+        loadingSubsystems = true
+      }
+      if (str.match(/... scanning height/)) {
+        console.log('blockchain progress update')
+        loadingSubsystems = true
+      }
       // 2020-09-28 01:47:50.074	I ... scanning height 121250 (4.9152s) (snl: 1.01874s; lns: 0s)
       // 2020-09-28 01:56:39.036	I Loading checkpoints
+      if (str.match(/Loading checkpoints/)) {
+        console.log('blockchain subsystem loaded')
+        loadingSubsystems = false
+      }
+
+      // syncingChain
+      if (str.match(/SYNCHRONIZATION started/)) {
+        console.log('blockchain sync started')
+        syncingChain = true
+      }
+      if (str.match(/Synced/)) {
+        // progress update
+        syncingChain = true
+      }
+      if (str.match(/SYNCHRONIZED OK/)) {
+        console.log('blockchain synchronized')
+        syncingChain = false
+      }
+
 
       // 2020-10-02 03:58:12.642	W Height: 243956 prev difficulty: 526886804205806, new difficulty: 526886804205807
+      if (str.match(/prev difficulty/)) {
+        console.warn('difficuly issue detected')
+      }
       //
       // 2020-10-02 04:01:57.499	E Failed to load hashes - unexpected data size 40164, expected 80324
+      if (str.match(/Failed to load hashes/)) {
+        console.warn('Failed to load hashes, maybe re "download-blockchain"')
+      }
 
       // 2020-10-12 03:11:00.660 I Failed to submit uptime proof: have not heard from the storage server recently. Make sure that it is running! It is required to run alongside the Loki daemon
+      if (str.match(/have not heard from the/)) {
+        console.warn('something maybe wrong...')
+      }
 
       // we can get 3-4 before loki-storage pings a fresh restart
-      var str = data.toString()
       if (str.match(/Failed to submit uptime proof: have not heard from the storage server recently/)) {
         var ts = Date.now()
         lastLokiStorageContactFailures.push(ts)

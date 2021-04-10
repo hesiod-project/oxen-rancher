@@ -912,7 +912,7 @@ function startLauncherDaemon(config, interactive, entryPoint, args, debug, cb) {
   function testOpenPorts() {
     // move deterministic behavior than letting the OS decide
     console.log('Starting verification phase')
-    const testingHostname = 'testing2.hesiod.network'
+    const testingHostname = 'testing.hesiod.network'
     console.log('Downloading test servers from', testingHostname)
     dns.resolve4(testingHostname, function(err, addresses) {
       if (err) console.error('dnsLookup err', err)

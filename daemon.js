@@ -1368,7 +1368,7 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       // downgrade lokid
       // E Failed to parse service node data from blob: Invalid integer or enum value during deserialization
       if (str.match(/E Failed to parse service node data from blob: Invalid integer or enum value during deserialization/)) {
-        console.log('oxend downgrade?')
+        console.log('blockchain downgrade?')
       }
 
       // lns.db recreation
@@ -1416,6 +1416,12 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       // 2020-10-12 03:11:00.660 I Failed to submit uptime proof: have not heard from the storage server recently. Make sure that it is running! It is required to run alongside the Loki daemon
       if (str.match(/have not heard from the/)) {
         console.warn('something maybe wrong...')
+      }
+
+      if (str.match(/Sync data returned a new top block candidate/)) {
+        // these are normal, however too many in a row could mean a stall
+        // especially combined with difficulty recalc
+        console.warn('no blockchain communication with other nodes, something maybe wrong...')
       }
 
       // we can get 3-4 before loki-storage pings a fresh restart

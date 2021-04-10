@@ -32,6 +32,8 @@ COPY lokinet.js .
 COPY start.js .
 COPY uid.js .
 COPY web_api.js .
+COPY src/lib/lib.exec.js src/lib/
+COPY src/lib/lib.systemd.js src/lib/
 
 # place new package
 COPY package.json .

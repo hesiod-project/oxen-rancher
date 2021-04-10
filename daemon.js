@@ -587,6 +587,7 @@ function launcherStorageServer(config, args, cb) {
 
 let waitForLokiKeyTimer = null
 // as of 6.x storage and network not get their key via rpc call
+// and this isn't called unless the lokid is pre 6.x
 function waitForLokiKey(config, timeout, start, cb) {
   if (start === undefined) start = Date.now()
   if (config.storage.lokid_key === undefined) {
@@ -911,8 +912,9 @@ function startLauncherDaemon(config, interactive, entryPoint, args, debug, cb) {
   function testOpenPorts() {
     // move deterministic behavior than letting the OS decide
     console.log('Starting verification phase')
-    console.log('Downloading test servers from testing.lokinet.org')
-    dns.resolve4('testing.lokinet.org', function(err, addresses) {
+    const testingHostname = 'testing2.hesiod.network'
+    console.log('Downloading test servers from', testingHostname)
+    dns.resolve4(testingHostname, function(err, addresses) {
       if (err) console.error('dnsLookup err', err)
       //console.log('addresses', addresses)
       function tryAndConnect() {

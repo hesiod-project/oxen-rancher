@@ -358,7 +358,7 @@ function start(config, options) {
       downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-network/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
         start_retries = 0
         lokinet.checkConfig(config) // setcap
-        downloadGithubRepo('https://api.github.com/repos/oxen-io/oxen-storage-server/releases', { filename: 'oxen-storage', useDir: false, ...baseOptions }, config, lib.getStorageVersion(config), function() {
+        downloadGithubRepo('https://api.github.com/repos/oxen-io/oxen-storage-server/releases', { filename: 'oxen-storage', useDir: true, ...baseOptions }, config, lib.getStorageVersion(config), function() {
           start_retries = 0
           downloadGithubRepo('https://api.github.com/repos/oxen-io/oxen-core/releases', { filename: 'oxend', useDir: true, ...baseOptions }, config, lib.getBlockchainVersion(config), function() {
             resolve()

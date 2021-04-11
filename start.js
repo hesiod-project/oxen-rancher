@@ -121,6 +121,7 @@ function setupBlockchainForStart(args, config) {
   // any way to validate these ip strings?
   // have to do this first as it should drive the others...
   if (xmrOptions['service-node-public-ip']) {
+    //console.log('Setting IPv4', xmrOptions['service-node-public-ip'])
     config.launcher.publicIPv4 = xmrOptions['service-node-public-ip']
     // will this stomp INI? yes
     // so we'll just make sure they're not set
@@ -185,7 +186,7 @@ module.exports = function(args, config, entryPoint, debug) {
     //encryption-privkey=/Users/admin/.lokinet/encryption.private
     var version = lib.getNetworkVersion(config)
     // 0.8.x doesn't need to prefix
-    const needToPrepend = (!version.match('lokinet-0.8.'))
+    const needToPrepend = (!version || !version.match('lokinet-0.8.'))
     if (needToPrepend) {
       config.network.transport_privkey = config.network.data_dir + '/transport.private'
       config.network.encryption_privkey = config.network.data_dir + '/encryption.private'

@@ -705,13 +705,18 @@ async function getLauncherStatus(config, lokinet, offlineMessage, cb) {
     doneResolver()
   }
 
+  // this flat out doesn't matter any more in a post ss 2.x world
+  /*
   if (pids.runningConfig.network.enabled || pids.runningConfig.storage.enabled) {
     if (running.lokid) {
       //console.log('lokid_key', config.storage.lokid_key)
-      checklist.lokiKey = fs.existsSync(pids.runningConfig.blockchain.lokid_key) ? ('found at ' + pids.runningConfig.blockchain.lokid_key) : offlineMessage
-      //checklist.lokiEdKey = fs.existsSync(pids.runningConfig.blockchain.lokid_edkey) ? ('found at ' + pids.runningConfig.blockchain.lokid_edkey) : offlineMessage
+      if (!configUtil.isStorageBinary2X(config)) {
+        checklist.lokiKey = fs.existsSync(pids.runningConfig.blockchain.lokid_key) ? ('found at ' + pids.runningConfig.blockchain.lokid_key) : offlineMessage
+      }
+      checklist.lokiEdKey = fs.existsSync(pids.runningConfig.blockchain.lokid_edkey) ? ('found at ' + pids.runningConfig.blockchain.lokid_edkey) : offlineMessage
     }
   }
+  */
 
   if (pids.runningConfig.network.enabled) {
     checklist.network = running.lokinet ? ('running as ' + running.lokinet) : offlineMessage
@@ -869,7 +874,7 @@ function stopLauncher(config) {
   if (systemdUtils.isSystemdEnabled(config)) {
     console.log('systemd lokid service is enabled')
     if (systemdUtils.isStartedWithSystemD()) {
-      console.log('systemd lokid service is active, stopping')
+      console.log('systemd lokid service is active, stopping with systemd')
       // are we root?
       if (process.getuid() !== 0) {
         console.log("this command isn't running as root, so can't stop launcher, run again with sudo")

@@ -131,9 +131,9 @@ function isEnabled(config) {
     // and probably should make sure it's using our entrypoint
     // incase there's multiple snode?
     const stdoutShow = execSync('systemctl show lokid')
-    // console.log('stdoutShow', stdoutShow.toString())
+    //console.log('stdoutShow', stdoutShow.toString())
     if (stdoutShow.toString().includes(config.entrypoint)) {
-      return systemd.serviceEnable('lokid')
+      return systemd.serviceEnabled('lokid')
     } else {
       console.log('System has systemd service but not for', config.entrypoint)
       // console.log(stdoutShow.toString())

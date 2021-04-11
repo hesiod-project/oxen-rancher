@@ -587,6 +587,7 @@ function launcherStorageServer(config, args, cb) {
 
 let waitForLokiKeyTimer = null
 // as of 6.x storage and network not get their key via rpc call
+// and this isn't called unless the lokid is pre 6.x
 function waitForLokiKey(config, timeout, start, cb) {
   if (start === undefined) start = Date.now()
   if (config.storage.lokid_key === undefined) {
@@ -911,8 +912,9 @@ function startLauncherDaemon(config, interactive, entryPoint, args, debug, cb) {
   function testOpenPorts() {
     // move deterministic behavior than letting the OS decide
     console.log('Starting verification phase')
-    console.log('Downloading test servers from testing.lokinet.org')
-    dns.resolve4('testing.lokinet.org', function(err, addresses) {
+    const testingHostname = 'testing.hesiod.network'
+    console.log('Downloading test servers from', testingHostname)
+    dns.resolve4(testingHostname, function(err, addresses) {
       if (err) console.error('dnsLookup err', err)
       //console.log('addresses', addresses)
       function tryAndConnect() {
@@ -1366,7 +1368,7 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       // downgrade lokid
       // E Failed to parse service node data from blob: Invalid integer or enum value during deserialization
       if (str.match(/E Failed to parse service node data from blob: Invalid integer or enum value during deserialization/)) {
-        console.log('oxend downgrade?')
+        console.log('blockchain downgrade?')
       }
 
       // lns.db recreation
@@ -1414,6 +1416,12 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       // 2020-10-12 03:11:00.660 I Failed to submit uptime proof: have not heard from the storage server recently. Make sure that it is running! It is required to run alongside the Loki daemon
       if (str.match(/have not heard from the/)) {
         console.warn('something maybe wrong...')
+      }
+
+      if (str.match(/Sync data returned a new top block candidate/)) {
+        // these are normal, however too many in a row could mean a stall
+        // especially combined with difficulty recalc
+        console.warn('no blockchain communication with other nodes, something maybe wrong...')
       }
 
       // we can get 3-4 before loki-storage pings a fresh restart

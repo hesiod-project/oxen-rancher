@@ -1,8 +1,8 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 RUN set -ex && \
     apt-get update && \
-    apt-get --no-install-recommends --yes install ca-certificates curl xz-utils && \
+    apt-get --no-install-recommends --yes install ca-certificates curl xz-utils libcap2-bin && \
     apt-get clean && \
     rm -rf /var/lib/apt
 ARG node_ver=10
@@ -32,6 +32,8 @@ COPY lokinet.js .
 COPY start.js .
 COPY uid.js .
 COPY web_api.js .
+COPY src/lib/lib.exec.js src/lib/
+COPY src/lib/lib.systemd.js src/lib/
 
 # place new package
 COPY package.json .

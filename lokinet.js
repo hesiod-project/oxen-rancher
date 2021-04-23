@@ -1008,6 +1008,8 @@ function generateSerivceNodeINI8(config, cb) {
       system: {
       }
     }
+    // The config option [network]:profiles is deprecated and has been ignored.
+    delete runningConfig.network.profiles
     if (config.lokid) {
       runningConfig.lokid = {
         enabled: 1,
@@ -1424,7 +1426,7 @@ function startServiceNode(config, cb) {
   var networkConfig = config.network;
   checkConfig(networkConfig)
   var version = lib.getNetworkVersion(config)
-  if (version.match('lokinet-0.8.')) {
+  if (version.match('lokinet-0.8.') || version.match('lokinet-0.9.')) {
     console.log('Detected Lokinet-8.x')
     networkConfig.ini_writer = generateSerivceNodeINI8
     networkConfig.requireModeParam = true

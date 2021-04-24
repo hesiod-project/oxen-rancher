@@ -2,6 +2,7 @@ const fs = require('fs')
 const os = require('os')
 const ini = require(__dirname + '/ini')
 const lib = require(__dirname + '/lib')
+const resolve = require('path').resolve
 
 // only defaults we can save to disk
 // disk config is loaded over this...
@@ -305,6 +306,7 @@ function getLokidVersion(config) {
       binary4Xor5XCache = lokid_version.match(/v[54]\./)?true:false
       binary7xCache = lokid_version.match(/v7\./)?true:false
       binary8xCache = lokid_version.match(/v8\./)?true:false
+      binary9xCache = lokid_version.match(/v9\./)?true:false
       versionCache = lokid_version
       return lokid_version
     } catch(e) {
@@ -317,6 +319,7 @@ function getLokidVersion(config) {
     binary4Xor5XCache = undefined
     binary7xCache = undefined
     binary8xCache = undefined
+    binary9xCache = undefined
   }
   return false;
 }
@@ -345,24 +348,39 @@ function isBlockchainBinary8X(config) {
   return binary8xCache
 }
 
+// socket change
 function blockchainBinaryAfter813(config) {
   const version = getLokidVersion(config)
+  // FIXME: parse out the semvar string so we can use math
+  //if (version.match(/v9/) || version.match(/v10/) || version.match(/v11/)) {
+  //}
+  // 9x needs to return true
+  if (binary9xCache) {
+    return true
+  }
   if (binary8xCache) {
     if (version.match(/v8.1.0/) || version.match(/v8.1.1/) || version.match(/v8.1.2/)) {
       return false
     }
     return true
   }
-  // 9x needs to return true
-  // FIXME: parse out the semvar string so we can use math
-  //if (version.match(/v9/) || version.match(/v10/) || version.match(/v11/)) {
-  //}
   return false
+}
+
+function blockchainBinary9X(config) {
+  if (binary9xCache !== null) return binary9xCache
+  getLokidVersion(config)
+  return binary9xCache
 }
 
 function isStorageBinary2X(config) {
   const binaryVersion = lib.getStorageVersion(config)
   return binaryVersion.match(/v2/)
+}
+
+function isStorageBinary21X(config) {
+  const binaryVersion = lib.getStorageVersion(config)
+  return binaryVersion.match(/v2.1/)
 }
 
 function checkLauncherConfig(config) {
@@ -587,7 +605,11 @@ function checkBlockchainConfig(config) {
 
   // 8.x requires this now
   //ipc:///root/.loki/testnet/lokid.sock
-  config.blockchain.zmq_socket = 'ipc://' + getLokiDataDir(config) + '/lokid.sock'
+  if (blockchainBinary9X(config)) {
+    config.blockchain.zmq_socket = 'ipc://' + getLokiDataDir(config) + '/oxend.sock'
+  } else {
+    config.blockchain.zmq_socket = 'ipc://' + getLokiDataDir(config) + '/lokid.sock'
+  }
   /*
   if (config.blockchain.zmq_port === undefined || config.blockchain.zmq_port === '0') {
     if (config.blockchain.network == 'test') {
@@ -694,7 +716,10 @@ function checkStorageConfig(config) {
   if (config.storage.lokid_key === undefined) {
     config.storage.lokid_key = getLokiDataDir(config) + '/key'
   }
+
   config.storage.lokid_rpc_port = config.blockchain.rpc_port
+  const absOxendDataDir = resolve(config.blockchain.data_dir)
+  config.storage.oxend_rpc_socket = 'ipc://' + absOxendDataDir + '/oxend.sock'
 }
 
 function postcheckConfig(config) {
@@ -1002,6 +1027,7 @@ module.exports = {
   isBlockchainBinary8X: isBlockchainBinary8X,
   blockchainBinaryAfter813: blockchainBinaryAfter813,
   isStorageBinary2X: isStorageBinary2X,
+  isStorageBinary21X: isStorageBinary21X,
   blockchainIsDefaultRPCPort: blockchainIsDefaultRPCPort,
   blockchainIsDefaultP2PPort: blockchainIsDefaultP2PPort,
   blockchainIsDefaultQunPort: blockchainIsDefaultQunPort,

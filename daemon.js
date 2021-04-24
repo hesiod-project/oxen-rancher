@@ -269,9 +269,24 @@ function launcherStorageServer(config, args, cb) {
   if (config.storage.data_dir) {
     optionals.push('--data-dir', config.storage.data_dir)
   }
-  if (config.storage.lokid_rpc_port) {
-    optionals.push('--lokid-rpc-port', config.storage.lokid_rpc_port)
+  // BLOCKCHAIN communication
+  if (configUtil.isStorageBinary21X(config)) {
+    if (config.storage.oxend_rpc_socket) {
+      optionals.push('--oxend-rpc', config.storage.oxend_rpc_socket)
+    } else {
+      if (config.storage.oxend_rpc_ip) {
+        optionals.push('--oxend-rpc-ip', config.storage.oxend_rpc_ip)
+      }
+      if (config.storage.oxend_rpc_port) {
+        optionals.push('--oxend-rpc-port', config.storage.oxend_rpc_port)
+      }
+    }
+  } else {
+    if (config.storage.lokid_rpc_port) {
+      optionals.push('--lokid-rpc-port', config.storage.lokid_rpc_port)
+    }
   }
+  // key/lmq-port
   if (!configUtil.isStorageBinary2X(config)) {
     // 1.0.x
     // this was required, we'll stop supporting it in 2x (tho 2.0 still accepts it)
@@ -545,6 +560,7 @@ function launcherStorageServer(config, args, cb) {
       // these seem to be empty
       console.log(stdout, 'stderr', stderr)
       // also now can be a storage server crash
+      // also can mean bad params passed in
       // we can use a port to check to make sure...
       console.log('')
       console.warn('StorageServer bind port could be in use, please check to make sure.', config.storage.binary_path, 'is not already running on port', config.storage.port)

@@ -1044,6 +1044,10 @@ function generateSerivceNodeINI8(config, cb) {
       runningConfig.bind[params.lokinet_nic] = config.internal_port
     }
     applyConfig(config, runningConfig)
+    // The config option [network]:profiles is deprecated and has been ignored.
+    if (runningConfig.network) {
+      delete runningConfig.network.profiles
+    }
     // not in seedMode, make sure we have some way to bootstrap
     if (!config.seedMode && !runningConfig.bootstrap && !runningConfig.connect) {
       console.error()
@@ -1424,7 +1428,7 @@ function startServiceNode(config, cb) {
   var networkConfig = config.network;
   checkConfig(networkConfig)
   var version = lib.getNetworkVersion(config)
-  if (version.match('lokinet-0.8.')) {
+  if (version.match('lokinet-0.8.') || version.match('lokinet-0.9.')) {
     console.log('Detected Lokinet-8.x')
     networkConfig.ini_writer = generateSerivceNodeINI8
     networkConfig.requireModeParam = true

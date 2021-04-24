@@ -1009,7 +1009,9 @@ function generateSerivceNodeINI8(config, cb) {
       }
     }
     // The config option [network]:profiles is deprecated and has been ignored.
-    delete runningConfig.network.profiles
+    if (runningConfig.network) {
+      delete runningConfig.network.profiles
+    }
     if (config.lokid) {
       runningConfig.lokid = {
         enabled: 1,

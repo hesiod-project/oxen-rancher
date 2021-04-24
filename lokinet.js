@@ -1008,10 +1008,6 @@ function generateSerivceNodeINI8(config, cb) {
       system: {
       }
     }
-    // The config option [network]:profiles is deprecated and has been ignored.
-    if (runningConfig.network) {
-      delete runningConfig.network.profiles
-    }
     if (config.lokid) {
       runningConfig.lokid = {
         enabled: 1,
@@ -1048,6 +1044,10 @@ function generateSerivceNodeINI8(config, cb) {
       runningConfig.bind[params.lokinet_nic] = config.internal_port
     }
     applyConfig(config, runningConfig)
+    // The config option [network]:profiles is deprecated and has been ignored.
+    if (runningConfig.network) {
+      delete runningConfig.network.profiles
+    }
     // not in seedMode, make sure we have some way to bootstrap
     if (!config.seedMode && !runningConfig.bootstrap && !runningConfig.connect) {
       console.error()

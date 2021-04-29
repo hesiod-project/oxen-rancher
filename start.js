@@ -185,8 +185,10 @@ module.exports = function(args, config, entryPoint, debug) {
     //transport-privkey=/Users/admin/.lokinet/transport.private
     //encryption-privkey=/Users/admin/.lokinet/encryption.private
     var version = lib.getNetworkVersion(config)
-    // 0.8.x doesn't need to prefix
-    const needToPrepend = (!version || !version.match('lokinet-0.8.'))
+    // 0.8.x+ doesn't need to prefix
+    const needToPrepend = (!version || !(
+      version.match('lokinet-0.8.') || version.match('lokinet-0.9.')
+    ))
     if (needToPrepend) {
       config.network.transport_privkey = config.network.data_dir + '/transport.private'
       config.network.encryption_privkey = config.network.data_dir + '/encryption.private'

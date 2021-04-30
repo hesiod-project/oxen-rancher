@@ -1437,7 +1437,7 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       if (str.match(/Sync data returned a new top block candidate/)) {
         // these are normal, however too many in a row could mean a stall
         // especially combined with difficulty recalc
-        console.warn('no blockchain communication with other nodes, something maybe wrong...')
+        console.warn('no blockchain communication with other nodes, something maybe wrong or it\'s about to start a sync...')
       }
 
       // we can get 3-4 before loki-storage pings a fresh restart

@@ -74,14 +74,25 @@ async function continueStart() {
   //console.debug('Launcher arguments:', args)
 
   function findFirstArgWithoutDash() {
+    const outArgs = findAllArgWithoutDashes()
+    //console.log('outArgs', outArgs)
+    if (!outArgs.length) return ''
+    return outArgs[0]
+  }
+  function findSecondArgWithoutDash() {
+    const outArgs = findAllArgWithoutDashes()
+    if (outArgs.length < 2) return ''
+    return outArgs[1]
+  }
+  function findAllArgWithoutDashes() {
+    const outArgs = []
+    //console.log('args', args)
     for(var i in args) {
       var arg = args[i]
       //console.log('arg is', arg)
-      if (arg.match(/^-/)) continue
-      //console.log('command', arg)
-      return arg
+      if (arg[0] !== '-') outArgs.push(arg)
     }
-    return ''
+    return outArgs
   }
 
   // find the first arg without --
@@ -232,8 +243,24 @@ async function continueStart() {
     case 'strart':
     case 'staart':
     case 'start': // official
-      warnRunAsRoot()
-      require(__dirname + '/start')(args, config, __filename, false)
+      const ransysd = require(__dirname + '/modes/check-systemd')
+      const installed = ransysd.isSystemdEnabled(config)
+      if (installed) {
+        const restartUser = ransysd.getUser()
+
+        // is it already running?
+        if (ransysd.isStartedWithSystemD()) {
+          console.log('Already running in system as', restartUser)
+          return
+        }
+        console.log('starting launcher as', restartUser)
+        const systemd = require(__dirname + '/src/lib/lib.systemd.js')
+        systemd.serviceStart('lokid')
+        // wait for start?
+      } else {
+        warnRunAsRoot()
+        require(__dirname + '/start')(args, config, __filename, false)
+      }
     break;
     case 'stauts':
     case 'statsu':
@@ -242,6 +269,7 @@ async function continueStart() {
     case 'stautu':
     case 'status': // official
       await statusSystem.status()
+
       var type = findFirstArgWithoutDash()
       if (type) {
         const nodeVer = Number(process.version.match(/^v(\d+\.\d+)/)[1])
@@ -556,12 +584,7 @@ async function continueStart() {
     break;
     case 'check-systemd':
     case 'upgrade-systemd': // official
-      // do the docs expect a specific message
-      // requireRoot()
-      if (process.getuid() != 0) {
-        console.log('upgrade-systemd needs to be ran as root, try prefixing your attempted command with: sudo')
-        process.exit(1)
-      }
+      requireRoot()
       const systemdUtils = require(__dirname + '/modes/check-systemd')
       // we should run this even if it's not enabled
       // as people maybe installing this file for the first time
@@ -578,6 +601,36 @@ async function continueStart() {
       if (type === 'disable') {
         requireRoot()
         // unlink('/etc/systemd/system/lokid.service')
+      } else
+      if (type === 'check') {
+        const ransysd = require(__dirname + '/modes/check-systemd')
+        if (!fs.existsSync('/etc/systemd/system/lokid.service')) {
+          console.log('Will launch on restart: no, not installed')
+        } else {
+          const restartUser = ransysd.getUser()
+          console.log('Installed to run as:', restartUser)
+          const installed = ransysd.isSystemdEnabled(config)
+          const sysdrunning = ransysd.isStartedWithSystemD()
+          console.log('Will launch on restart:', installed ? 'yes' : 'no')
+          if (fs.existsSync('/etc/systemd/system/lokid.service')) {
+            console.log('Is currently running under systemd:', sysdrunning ? 'yes' : 'no')
+          }
+        }
+      } else
+      if (type === 'install') {
+        // need a user params
+        requireRoot()
+        var user = findSecondArgWithoutDash()
+        if (!user) {
+          console.log('No user passed in! You must explicitly tell us what user you want to run the rancher as, `snode` is commonly used')
+          console.log('You are currently logged in as', os.userInfo().username)
+          return
+        }
+        require(__dirname + '/modes/check-systemd').install(config, __filename, user)
+      } else
+      if (type === 'uninstall' || type === 'unistall' || type === 'uninstalll') {
+        requireRoot()
+        require(__dirname + '/modes/check-systemd').uninstall(config)
       } else
       if (type === 'log') {
         require(__dirname + '/modes/check-systemd').launcherLogs(config)

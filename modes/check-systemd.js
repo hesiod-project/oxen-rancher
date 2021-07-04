@@ -6,6 +6,59 @@ const spawn = cp.spawn
 const lokinet = require(__dirname + '/../lokinet')
 const systemd = require(__dirname + '/../src/lib/lib.systemd.js')
 
+function writeServiceFile(nLines, serviceFile) {
+  var newBytes = nLines.join("\n")
+  fs.writeFileSync(serviceFile, newBytes)
+  const found = lokinet.getBinaryPath('systemctl')
+  if (found) {
+    try {
+      execSync('systemctl daemon-reload')
+      // FIXME also run:
+      // systemctl enable lokid
+      // systemctl start lokid? no, we reboot on fresh install
+    } catch(e) {
+      console.warn('(Error when trying to reload: ', e.message, ') You may need to run: systemctl daemon-reload')
+    }
+  } else {
+    console.log('You may need to run: systemctl daemon-reload')
+  }
+}
+
+// only should be done as root
+function createServiceFile(entrypoint, user) {
+  // copy systemd/lokid.service /etc/systemd/system
+  const service_bytes = fs.readFileSync(__dirname + '/../systemd/lokid.service')
+  var lines = service_bytes.toString().split(/\n/)
+  var nLines = []
+  for(var i in lines) {
+    var tline = lines[i].trim()
+    if (tline.match(/^User=/)) {
+      tline = 'User=' + user
+    }
+    if (tline.match(/^ExecStart=/)) {
+      tline = 'ExecStart=' + entrypoint + ' systemd-start'
+    }
+    nLines.push(tline)
+  }
+  writeServiceFile(nLines, '/etc/systemd/system/lokid.service')
+}
+
+function getUser() {
+  if (!fs.existsSync('/etc/systemd/system/lokid.service')) {
+    return false
+  }
+  const service_bytes = fs.readFileSync('/etc/systemd/system/lokid.service')
+  var lines = service_bytes.toString().split(/\n/)
+  var nLines = []
+  for(var i in lines) {
+    var tline = lines[i].trim()
+    if (tline.match(/^User=/)) {
+      var parts = tline.split(/=/)
+      return parts[1]
+    }
+  }
+}
+
 function rewriteServiceFile(serviceFile, entrypoint) {
   console.log('detected', serviceFile)
   // read file
@@ -55,32 +108,35 @@ function rewriteServiceFile(serviceFile, entrypoint) {
       console.warn('can not update your lokid.service, not running as root, please run with sudo')
     } else {
       console.log('updating lokid.service')
-      var newBytes = nLines.join("\n")
-      fs.writeFileSync(serviceFile, newBytes)
-      const found = lokinet.getBinaryPath('getcap')
-      if (found) {
-        try {
-          execSync('systemctl daemon-reload')
-          // FIXME also run:
-          // systemctl enable lokid
-          // systemctl start lokid? no, we reboot on fresh install
-        } catch(e) {
-          console.warn('(Error when trying to reload: ', e.message, ') You may need to run: systemctl daemon-reload')
-        }
-      } else {
-        console.log('You may need to run: systemctl daemon-reload')
-      }
+      writeServiceFile(nLines, serviceFile)
       return true
     }
   }
   return false
 }
 
-// we actually currently don't use config at all... but we likely will evenutally
+function hasDebsEnabled() {
+  // debs install?
+  if (fs.existsSync('/lib/systemd/system/loki-node.service')) {
+    // systemctl is-enabled loki-node
+    let isEnabled = null
+    try {
+      const out = execSync('systemctl is-enabled loki-node')
+      isEnabled = out.toString() !== 'disabled'
+    } catch (err) {
+      isEnabled = err.stdout.toString().trim() !== 'disabled'
+    }
+    return isEnabled
+  }
+  return false
+}
+
+// really doesn't need to be async
 async function start(config, entrypoint) {
+  // could be done externally?
   const lib = require(__dirname + '/../lib')
   // address issue #19
-  lib.stopLauncher(config)
+  lib.stopLauncher(config) // currently not async
 
   if (fs.existsSync('/etc/systemd/system/lokid.service')) {
     rewriteServiceFile('/etc/systemd/system/lokid.service', entrypoint)
@@ -93,20 +149,52 @@ async function start(config, entrypoint) {
     rewriteServiceFile('/lib/systemd/system/loki-node.service')
   }
   */
-  if (fs.existsSync('/lib/systemd/system/loki-node.service')) {
-    // systemctl is-enabled loki-node
-    let isEnabled = null
-    try {
-      const out = execSync('systemctl is-enabled loki-node')
-      isEnabled = out.toString() !== 'disabled'
-    } catch (err) {
-      isEnabled = err.stdout.toString().trim() !== 'disabled'
-    }
-    if (isEnabled) {
-      console.warn('detected a DEBs install, you should not run both the DEBs and the launcher')
-      console.log('To disable the DEBs install, please run: sudo systemctl disable --now loki-node.service')
-    }
+  if (hasDebsEnabled()) {
+    console.warn('detected a DEBs install, you should not run both the DEBs and the rancher')
+    console.log('To disable the DEBs install, please run: sudo systemctl disable --now loki-node.service')
   }
+}
+
+function install(config, entrypoint, user) {
+  if (hasDebsEnabled()) {
+    console.warn('detected a DEBs install, you should not run both the DEBs and the rancher')
+    console.log('To disable the DEBs install, please run: sudo systemctl disable --now loki-node.service')
+    return
+  }
+
+  console.log('ensuring launcher is not running')
+  // could be done externally?
+  const lib = require(__dirname + '/../lib')
+  // address issue #19
+  lib.stopLauncher(config) // currently not async
+
+  // ensure service file
+  /*
+  if (fs.existsSync('/etc/systemd/system/lokid.service')) {
+    rewriteServiceFile('/etc/systemd/system/lokid.service', entrypoint)
+  } else {
+  */
+  console.log('creating systemd service file, installing service as', user)
+    createServiceFile(entrypoint, user)
+  //}
+  console.log('loading systemd service file')
+  systemd.refreshServices()
+  console.log('enabling systemd service file on reboot')
+  systemd.serviceEnable('lokid')
+}
+
+function uninstall(config) {
+  if (isEnabled(config)) {
+    console.log('service file is enabled, disabling it')
+    systemd.serviceStop('lokid')
+    systemd.serviceDisable('lokid')
+  }
+  if (fs.existsSync('/etc/systemd/system/lokid.service')) {
+    console.log('service file exists, deleting it')
+    fs.unlinkSync('/etc/systemd/system/lokid.service')
+    systemd.refreshServices()
+  }
+  console.log('uninstall complete')
 }
 
 function launcherLogs(config) {
@@ -114,6 +202,7 @@ function launcherLogs(config) {
   console.log(stdout.toString())
 }
 
+// is running
 function isActive() {
   try {
     const stdout = execSync('systemctl is-active lokid')
@@ -123,9 +212,11 @@ function isActive() {
   }
 }
 
+// can be ran (installed)
 function isEnabled(config) {
   if (!fs.existsSync('/etc/systemd/system/lokid.service')) {
-    return
+    //console.log('isEnabled - no lokid service file')
+    return false
   }
   try {
     // and probably should make sure it's using our entrypoint
@@ -133,6 +224,7 @@ function isEnabled(config) {
     const stdoutShow = execSync('systemctl show lokid')
     //console.log('stdoutShow', stdoutShow.toString())
     if (stdoutShow.toString().includes(config.entrypoint)) {
+      //console.log('isEnabled - contains our entrypoint', config.entrypoint)
       return systemd.serviceEnabled('lokid')
     } else {
       console.log('System has systemd service but not for', config.entrypoint)
@@ -140,13 +232,21 @@ function isEnabled(config) {
     }
     return false
   } catch (e) {
-    return
+    console.error('isEnabled - err', e)
+    return null
   }
 }
 
+// we should take responsible for oxen-rancher related functions
+
 module.exports = {
-  start: start,
+  start: start, // upgrade/migrate older lokid
+  install: install,
+  uninstall: uninstall,
+  hasDebsEnabled: hasDebsEnabled,
   launcherLogs: launcherLogs,
   isStartedWithSystemD: isActive,
   isSystemdEnabled: isEnabled,
+  createServiceFile: createServiceFile,
+  getUser: getUser,
 }

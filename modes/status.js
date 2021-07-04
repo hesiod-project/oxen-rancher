@@ -49,14 +49,27 @@ async function status() {
     // if we have a launcher, then ofc the port SHOULD be in use...
 
   }
+
+  const ransysd = require(__dirname + '/check-systemd')
+  const installed = ransysd.isSystemdEnabled(config)
+  let restartUser
+  if (installed) {
+    restartUser = ransysd.getUser()
+  }
+  console.log('Will launch on restart:', installed ? ('as ' + restartUser) : 'no')
+
   //console.log('status pids', pids)
   //console.log('running', running)
   // if the launcher is running
   if (running.launcher) {
+    const sysdrunning = ransysd.isStartedWithSystemD()
+    console.log('Will restart on rancher crash:', sysdrunning ? 'yes' : 'no')
+    // FIXME: compare running user with restartUser
   } else {
     console.log('Rancher is not running')
     // FIXME: may want to check on child daemons to make sure they're not free floating?
   }
+
   // launcher will always be imperfect
   // show info IF we have it
   // processes may be broken/zombies
@@ -72,6 +85,8 @@ async function status() {
 
   // "not running" but too easy to confuse with "running"
   await lib.getLauncherStatus(config, lokinet, 'offline', function(running, checklist) {
+
+
     //console.log('nodeVer', nodeVer)
     if (nodeVer >= 10) {
       console.table(checklist)

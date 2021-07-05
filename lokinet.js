@@ -1429,7 +1429,7 @@ function startServiceNode(config, cb) {
   checkConfig(networkConfig)
   var version = lib.getNetworkVersion(config)
   if (version.match('lokinet-0.8.') || version.match('lokinet-0.9.')) {
-    console.log('Detected Lokinet-8.x')
+    console.log('Detected Lokinet-8.x+')
     networkConfig.ini_writer = generateSerivceNodeINI8
     networkConfig.requireModeParam = true
   } else {

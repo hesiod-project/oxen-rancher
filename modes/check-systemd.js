@@ -179,16 +179,27 @@ function install(config, entrypoint, user) {
   //}
   console.log('loading systemd service file')
   systemd.refreshServices()
+  enable(config)
+}
+
+function enable(config) {
   console.log('enabling systemd service file on reboot')
-  systemd.serviceEnable('lokid')
+  return systemd.serviceEnable('lokid')
+}
+
+function disable(config) {
+  if (isEnabled(config)) {
+    console.log('service file is enabled, disabling it')
+    return systemd.serviceDisable('lokid')
+  }
+  return true
 }
 
 function uninstall(config) {
   if (isEnabled(config)) {
-    console.log('service file is enabled, disabling it')
     systemd.serviceStop('lokid')
-    systemd.serviceDisable('lokid')
   }
+  disable(config)
   if (fs.existsSync('/etc/systemd/system/lokid.service')) {
     console.log('service file exists, deleting it')
     fs.unlinkSync('/etc/systemd/system/lokid.service')
@@ -243,6 +254,8 @@ module.exports = {
   start: start, // upgrade/migrate older lokid
   install: install,
   uninstall: uninstall,
+  enable: enable,
+  disable: disable,
   hasDebsEnabled: hasDebsEnabled,
   launcherLogs: launcherLogs,
   isStartedWithSystemD: isActive,

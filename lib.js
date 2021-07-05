@@ -23,21 +23,27 @@ function hereDoc(f) {
 }
 
 const logo = hereDoc(function () {/*!
-        .o0l.
-       ;kNMNo.
-     ;kNMMXd'
-   ;kNMMXd'                 .ld:             ,ldxkkkdl,.     'dd;     ,odl.  ;dd
- ;kNMMXo.  'ol.             ,KMx.          :ONXkollokXN0c.   cNMo   .dNNx'   dMW
-dNMMM0,   ;KMMXo.           ,KMx.        .oNNx'      .dNWx.  :NMo .cKWk;     dMW
-'dXMMNk;  .;ONMMXo'         ,KMx.        :NMx.         oWWl  cNWd;ON0:.      oMW
-  'dXMMNk;.  ;kNMMXd'       ,KMx.        lWWl          :NMd  cNMNNMWd.       dMW
-    'dXMMNk;.  ;kNMMXd'     ,KMx.        :NMx.         oWWl  cNMKolKWO,      dMW
-      .oXMMK;   ,0MMMNd.    ,KMx.        .dNNx'      .dNWx.  cNMo  .dNNd.    dMW
-        .lo'  'dXMMNk;.     ,KMXxdddddl.   :ONNkollokXN0c.   cNMo    ;OWKl.  dMW
-            'dXMMNk;        .lddddddddo.     ,ldxkkkdl,.     'od,     .cdo;  ;dd
-          'dXMMNk;
-         .oNMNk;             __LABEL__
-          .l0l.
+__LABEL__
+
+                                       /;    ;\
+                                   __  \\____//
+                                  /{_\_/   `'\____
+                                  \___   (o)  (o  }
+       _____________________________/          :--'
+   ,-,'`@@@@@@@@       @@@@@@         \_    `__\
+  ;:(  @@@@@@@@@        @@@             \___(o'o)
+  :: )  @@@@          @@@@@@        ,'@@(  `===='
+  :: : @@@@@:          @@@@         `@@@:
+  :: \  @@@@@:       @@@@@@@)    (  '@@@'
+  ;; /\      /`,    @@@@@@@@@\   :@@@@@)
+  ::/  )    {_----------------:  :~`,~~;
+ ;;'`; :   )                  :  / `; ;
+;;;; : :   ;                  :  ;  ; :
+`'`' / :  :                   :  :  : :
+    )_ \__;      ";"          :_ ;  \_\       `,','
+    :__\  \    * `,'*         \  \  :  \   *  8`;'*  *
+        `^'     \ :/           `^'  `-^-'   \v/ :  \/
+Art by Bill Ames
 */});
 
 function getLogo(str) {
@@ -382,7 +388,7 @@ function areWeRunning(config) {
     } else {
       // so many calls
       // do we need to say this everytime?
-      console.log('stale ' + config.launcher.var_path + '/launcher.pid, removing...')
+      console.log('stale ' + config.launcher.var_path + '/launcher.pid (' + pid + '), removing...')
       // should we nuke this proven incorrect file? yes
       fs.unlinkSync(config.launcher.var_path + '/launcher.pid')
       // FIXME: maybe have a lastrun file for debugging
@@ -419,6 +425,7 @@ function savePids(config, args, loki_daemon, lokinet, storageServer) {
     obj.blockchain_startedOptions = loki_daemon.startedOptions
     obj.blockchain_spawn_file     = loki_daemon.spawnfile
     obj.blockchain_spawn_args     = loki_daemon.spawnargs
+    obj.blockchain_status         = loki_daemon.status
   }
   if (storageServer && !storageServer.killed && storageServer.pid) {
     obj.storageServer      = storageServer.pid
@@ -745,6 +752,20 @@ async function getLauncherStatus(config, lokinet, offlineMessage, cb) {
       checklist.blockchain_rpc = offlineMessage
       checkDone('blockchain_rpc')
     }, 5000)
+
+    if (pids.blockchain_status) {
+      var status = []
+      if (pids.blockchain_status.loadingSubsystems) {
+        status.push('loadingSubsystems')
+      }
+      if (pids.blockchain_status.syncingChain) {
+        status.push('syncingChain')
+      }
+      if (status.length) {
+        checklist.blockchain_status = status.join(' ')
+      }
+    }
+
     // returns a promise now..
     try {
       var p = httpPost(url, '{}', function(data) {

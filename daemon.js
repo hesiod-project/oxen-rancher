@@ -868,20 +868,21 @@ function startLauncherDaemon(config, interactive, entryPoint, args, debug, cb) {
             // blockchain rpc is now required for SN
 
             var blockchainIsFine = pids.runningConfig && pids.runningConfig.blockchain && checklist.blockchain_rpc !== 'waiting...'
-            var networkIsFine = (!pids.runningConfig) || (!pids.runningConfig.network) || (!pids.runningConfig.network.enabled) || (checklist.network !== 'waiting...')
-            if (running.launcher && running.lokid && checklist.socketWorks !== 'waiting...' &&
-                  pids.runningConfig && blockchainIsFine && networkIsFine &&
-                  checklist.storageServer !== 'waiting...' && checklist.storage_rpc !== 'waiting...'
-                ) {
-              console.log('Start up successful!')
-              if (child) child.removeListener('close', crashHandler)
-              process.exit()
-            }
+            // donish conditions
             if (running.launcher && running.lokid && checklist.socketWorks !== 'waiting...' &&
                   pids.runningConfig && blockchainIsFine
                 ) {
-              if (checklist.blockchain_status.split(/ /).includes('syncingChain')) {
+              if (checklist.blockchain_status && checklist.blockchain_status.split(/ /).includes('syncingChain')) {
                 console.log('Blockchain is syncing, likely will be a long time until storage/network will be ready, check status periodically')
+                if (child) child.removeListener('close', crashHandler)
+                process.exit()
+              }
+              var networkIsFine = (!pids.runningConfig) || (!pids.runningConfig.network) || (!pids.runningConfig.network.enabled) || (checklist.network !== 'waiting...')
+              if (running.launcher && running.lokid && checklist.socketWorks !== 'waiting...' &&
+                    pids.runningConfig && blockchainIsFine && networkIsFine &&
+                    checklist.storageServer !== 'waiting...' && checklist.storage_rpc !== 'waiting...'
+                  ) {
+                console.log('Start up successful!')
                 if (child) child.removeListener('close', crashHandler)
                 process.exit()
               }

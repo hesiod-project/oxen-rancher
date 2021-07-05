@@ -153,16 +153,12 @@ async function continueStart() {
       var logo = lib.getLogo('git rev version')
       console.log(logo.replace(/version/, VERSION.toString()))
     } else {
-      var logo = lib.getLogo('L A U N C H E R   v e r s i o n   v version')
+      var logo = lib.getLogo('O X E N - R A N C H E R   v e r s i o n   v version')
       console.log(logo.replace(/version/, VERSION.toString().split('').join(' ')))
     }
   }
   if (showVersionCommands.includes(mode)) {
-    if (useGitVersion) {
-      console.log('Oxen-Rancher version', VERSION.toString())
-    } else {
-      console.log('Oxen-Rancher version', VERSION.toString())
-    }
+    console.log('Oxen-Rancher version', VERSION.toString())
   }
 
   var debugMode = mode.match(/debug/i)

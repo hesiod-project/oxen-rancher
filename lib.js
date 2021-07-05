@@ -872,19 +872,19 @@ function stopLokid(config) {
 function stopLauncher(config) {
   const systemdUtils = require(__dirname + '/modes/check-systemd')
   if (systemdUtils.isSystemdEnabled(config)) {
-    console.log('systemd lokid service is enabled')
+    //console.log('systemd lokid service is enabled')
     if (systemdUtils.isStartedWithSystemD()) {
-      console.log('systemd lokid service is active, stopping with systemd')
+      //console.log('systemd lokid service is active, stopping with systemd')
       // are we root?
       if (process.getuid() !== 0) {
-        console.log("this command isn't running as root, so can't stop launcher, run again with sudo")
+        //console.log("this command isn't running as root, so can't stop launcher, run again with sudo")
       } else {
         try {
           const stdoutBuf = execSync('systemctl stop lokid')
           console.log("launcher has been stopped")
           return
         } catch(e) {
-          console.log("stopping failed, falling back")
+          console.log("stopping via systemd failed, falling back")
         }
       }
     }
@@ -899,8 +899,9 @@ function stopLauncher(config) {
   if (pid) {
     // request launcher stop
     if (systemdUtils.isStartedWithSystemD()) {
-      console.warn('launcher was set up with systemd, and you will need to')
-      console.warn('"sudo systemctl stop lokid.service" before running this')
+      console.warn('launcher was set up with systemd, and you will need to run with sudo like')
+      //console.warn('"sudo systemctl stop lokid.service" before running this')
+      console.warn('"sudo oxen-rancher stop"')
       // or should we just return 0?
       process.exit(1)
     }
@@ -911,6 +912,7 @@ function stopLauncher(config) {
     // we quit too fast
     //require(__dirname + '/client')(config)
   } else {
+    // if no launcher...look for orphans
     var running = getProcessState(config)
     var pids = getPids(config)
     count += stopLokid(config)

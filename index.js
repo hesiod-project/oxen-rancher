@@ -174,6 +174,7 @@ async function continueStart() {
   const statusSystem = require(__dirname + '/modes/status')
   statusSystem.start(config)
 
+  const systemdUtils = require(__dirname + '/modes/check-systemd')
   async function doInstallUpgrade(user, config, install) {
     // check versions first...
     // what are we running, what do we have installed
@@ -195,8 +196,20 @@ async function continueStart() {
       // this isn't always faster either... like for Rick
       await require(__dirname + '/modes/download-blockchain').start(config, options)
     }
-    const systemdUtils = require(__dirname + '/modes/check-systemd')
-    await systemdUtils.start(config, __filename)
+    // detect upgrade or fresh install
+    if (fs.existsSync('/etc/systemd/system/lokid.service')) {
+      await systemdUtils.start(config, __filename)
+      // ensure it's enabled?
+      // they may have intentionally disabled it
+      /*
+      if (!systemdUtils.isSystemdEnabled(config)) {
+        systemdUtils.enable(config)
+      }
+      */
+    } else {
+      // this will enable
+      systemdUtils.install(config, __filename, user)
+    }
     await require(__dirname + '/modes/fix-perms').start(user, __dirname, config)
     // start-debug to test?
     if (systemdUtils.isSystemdEnabled(config)) {
@@ -243,19 +256,21 @@ async function continueStart() {
     case 'strart':
     case 'staart':
     case 'start': // official
-      const ransysd = require(__dirname + '/modes/check-systemd')
-      const installed = ransysd.isSystemdEnabled(config)
+      const installed = systemdUtils.isSystemdEnabled(config)
       if (installed) {
-        const restartUser = ransysd.getUser()
+        const restartUser = systemdUtils.getUser()
 
         // is it already running?
-        if (ransysd.isStartedWithSystemD()) {
+        if (systemdUtils.isStartedWithSystemD()) {
           console.log('Already running in system as', restartUser)
           return
         }
         console.log('starting launcher as', restartUser)
         const systemd = require(__dirname + '/src/lib/lib.systemd.js')
-        systemd.serviceStart('lokid')
+        if (!systemd.serviceStart('lokid')) {
+          console.log('Could not start via systemd, likely a permissions problem, run again with sudo')
+          console.log('To stop trying to start with systemd run: sudo oxen-rancher systemd disable')
+        }
         // wait for start?
       } else {
         warnRunAsRoot()
@@ -289,7 +304,7 @@ async function continueStart() {
               console.log(status)
             }
             if (pubkey) {
-              console.log(`More info: https://lokisn.com/sn/${pubkey}`)
+              console.log(`More info: https://oxensn.com/sn/${pubkey}`)
             }
           break;
           case 'storage':
@@ -396,6 +411,7 @@ async function continueStart() {
     break;
     // no restart because we don't want people croning it
     case 'sotp':
+    case 'stp':
     case 'stop': // official
       // maybe use the client to see what's taking lokid a while...
       //console.log('Getting launcher state')
@@ -480,6 +496,8 @@ async function continueStart() {
         }
 
         setTimeout(shutdownMonitor, wait)
+      } else {
+        console.log('No processes to shutdown')
       }
     break;
     case 'start-debug':
@@ -585,48 +603,54 @@ async function continueStart() {
     case 'check-systemd':
     case 'upgrade-systemd': // official
       requireRoot()
-      const systemdUtils = require(__dirname + '/modes/check-systemd')
       // we should run this even if it's not enabled
       // as people maybe installing this file for the first time
       systemdUtils.start(config, __filename)
     break;
     case 'systemd':
       var type = findFirstArgWithoutDash()
+      if (type === 'install') {
+        // need a user params
+        requireRoot()
+        const user = findSecondArgWithoutDash()
+        if (!user) {
+          console.log('No user passed in! You must explicitly tell us what user you want to run the rancher as, `snode` is commonly used')
+          console.log('You are currently logged in as', os.userInfo().username)
+          return
+        }
+        systemdUtils.install(config, __filename, user)
+      } else
       if (type === 'enable') {
         requireRoot()
-        // migrate or create
-        // need __filename for index location to put in service file
-        require(__dirname + '/modes/check-systemd').start(config, __filename)
+        if (systemdUtils.enable(config)) {
+          console.log('systemd starting is enabled')
+        }
       } else
-      if (type === 'disable') {
+      // bring an service node service file up to date
+      if (type === 'upgrade') {
         requireRoot()
-        // unlink('/etc/systemd/system/lokid.service')
+        // need __filename for index location to put in service file
+        systemdUtils.start(config, __filename)
       } else
       if (type === 'check') {
-        const ransysd = require(__dirname + '/modes/check-systemd')
         if (!fs.existsSync('/etc/systemd/system/lokid.service')) {
           console.log('Will launch on restart: no, not installed')
         } else {
-          const restartUser = ransysd.getUser()
+          const restartUser = systemdUtils.getUser()
           console.log('Installed to run as:', restartUser)
-          const installed = ransysd.isSystemdEnabled(config)
-          const sysdrunning = ransysd.isStartedWithSystemD()
+          const installed = systemdUtils.isSystemdEnabled(config)
+          const sysdrunning = systemdUtils.isStartedWithSystemD()
           console.log('Will launch on restart:', installed ? 'yes' : 'no')
           if (fs.existsSync('/etc/systemd/system/lokid.service')) {
             console.log('Is currently running under systemd:', sysdrunning ? 'yes' : 'no')
           }
         }
       } else
-      if (type === 'install') {
-        // need a user params
+      if (type === 'disable') {
         requireRoot()
-        var user = findSecondArgWithoutDash()
-        if (!user) {
-          console.log('No user passed in! You must explicitly tell us what user you want to run the rancher as, `snode` is commonly used')
-          console.log('You are currently logged in as', os.userInfo().username)
-          return
+        if (require(__dirname + '/modes/check-systemd').disable(config)) {
+          console.log('systemd starting is disabled')
         }
-        require(__dirname + '/modes/check-systemd').install(config, __filename, user)
       } else
       if (type === 'uninstall' || type === 'unistall' || type === 'uninstalll') {
         requireRoot()
@@ -635,7 +659,7 @@ async function continueStart() {
       if (type === 'log') {
         require(__dirname + '/modes/check-systemd').launcherLogs(config)
       } else {
-        console.log('requires one of the following parameters: enable or log')
+        console.log('requires one of the following parameters: install, enable, upgrade, check, disable, uninstall or log')
       }
     break;
     case 'debs':
@@ -748,11 +772,14 @@ async function continueStart() {
       await doInstallUpgrade(user, config, true)
     break;
     case 'upgrade': // official
-      var user = findFirstArgWithoutDash()
+      var user = systemdUtils.getUser()
       if (!user) {
-        console.log('No user passed in! You must explicitly tell us what user you want the permissions to be set for')
-        console.log('You are currently logged in as', os.userInfo().username)
-        return
+        user = findFirstArgWithoutDash()
+        if (!user) {
+          console.log('Not sure what user you want to run things under, you must explicitly tell us what user you want the permissions to be set for as a paraemter to this command')
+          console.log('You are currently logged in as', os.userInfo().username)
+          return
+        }
       }
       if (process.getuid() != 0) {
         console.log('install needs to be ran as root, try prefixing your attempted command with: sudo')
@@ -775,20 +802,21 @@ async function continueStart() {
       console.log(`
   Unknown command [${mode}]
 
-  oxen-rancher is manages the Loki.network suite of software primarily for service node operation
+  oxen-rancher is manages the oxen.network suite of software primarily for service node operation
   Usage:
     [sudo] oxen-rancher [command] [OPTIONS]
 
     Commands:
-      start       start the loki suite with OPTIONS
+      start       start the oxen suite with OPTIONS (requires sudo if in systemd mode)
       stop        stops the launcher running in the background
-      status      get the current loki suite status, can optionally provide:
+      status      get the current oxen suite status, can optionally provide:
                     blockchain - get blockchain status
       client      connect to oxend
       prequal     prequalify your server for service node operation
       config-view print out current configuration information
-      versions    show installed versions of Loki software
+      versions    show installed versions of oxen software
       systemd     requires one of the following options
+                    check - get systemd status
                     log - show systemd rancher log file
       keys        get your service node public keys
       show-quorum tries to give an estimate to the next time you're tested
@@ -799,12 +827,17 @@ async function continueStart() {
                             usually much faster than a normal oxend sync takes
 
     Commands that require root/sudo:
-      download-binaries - download the latest version of the loki software suite
+      download-binaries - download the latest version of the oxen software suite
         can optionally provide: force, prerel and force-prerel
-      upgrade-systemd (check-systemd) - reconfigures your lokid.service
+      systemd     requires one of the following options
+                    install - make launcher start on reboot
+                    enable - enable systemd mode
+                    upgrade - make sure your service file is up to date
+                    disable - disable systemd mode
+                    uninstall - don't start launcher on reboot
       fix-perms - requires user OPTION, make all operational files own by user
       install   - requires user OPTION, installs a fresh node
-      upgrade   - requires user OPTION, upgrade an existing node
+      upgrade   - upgrade an existing node, may require user OPTION
   `)
     break;
   }

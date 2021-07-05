@@ -1252,6 +1252,7 @@ function configureLokid(config, args) {
     //console.log('set?', key, ':', value)
     // remove any previous setting
     normalizeArgs = normalizeArgs.filter(item => {
+      // get key name
       var parts = item.replace(/^--/, '').split(/=/)
       var newSet = key !== parts.shift()
       if (!newSet) {
@@ -1282,7 +1283,7 @@ function configureLokid(config, args) {
         // if last was --!=
         // now removeDashes is definitely not a value
         // codify no value...
-        normalizeSet(last, '__REMOVE_ME__', false)
+        normalizeSet(last, '__REMOVE_ME__')
         last = null
       }
       var removeDashes = arg.replace(/^--/, '')
@@ -1290,7 +1291,7 @@ function configureLokid(config, args) {
         var parts = removeDashes.split(/=/)
         var key = parts.shift()
         var value = parts.join('=')
-        normalizeSet(key, value, false)
+        normalizeSet(key, value)
         last = null
       } else {
         // read next to make a decision
@@ -1298,14 +1299,18 @@ function configureLokid(config, args) {
       }
     } else {
       // hack to allow equal to be optional..
-      if (last != null) {
+      if (last !== null) {
         // should stitch together last = arg
-        normalizeSet(last, arg, true)
+        normalizeSet(last, arg)
       }
       last = null
     }
   }
   //console.log('last', last)
+  // flush the last if it's --testnet
+  if (last !== null) {
+    normalizeSet(last, '__REMOVE_ME__')
+  }
   // and process them as such...
   //console.log('normalized args', normalizeArgs)
   lokid_options = normalizeArgs.map(str => str.replace('=__REMOVE_ME__', ''))

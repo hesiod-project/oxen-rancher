@@ -45,17 +45,22 @@ function isActive(service) {
   }
 }
 
+// requires root
 function serviceStart(service) {
   const out = libexec.execOut('systemctl start ' + service)
   //console.log('serviceStart', out)
 /*
 Job for loki-node.service failed because the control process exited with error code.
 See "systemctl status loki-node.service" and "journalctl -xe" for details.
+
+Failed to start lokid.service: The name org.freedesktop.PolicyKit1 was not provided by any .service files
+See system logs and 'systemctl status lokid.service' for details.
 otherwise quiet
 */
-  return out
+  return !out.match(/failed/i)
 }
 
+// requires root
 function serviceStop(service) {
   const out = libexec.execOut('systemctl stop ' + service)
   // silent whether it's stopped or not
@@ -63,6 +68,7 @@ function serviceStop(service) {
   return out
 }
 
+// requires root
 function serviceEnable(service) {
   const out = libexec.execOut('systemctl enable ' + service)
   // Created symlink /etc/systemd/system/multi-user.target.wants/loki-node.service → /lib/systemd/system/loki-node.service.
@@ -70,15 +76,16 @@ function serviceEnable(service) {
   return out.match(/Created symlink /)
 }
 
+// requires root
 function serviceDisable(service) {
   const out = libexec.execOut('systemctl disable ' + service)
   // Removed /etc/systemd/system/multi-user.target.wants/loki-node.service.
   //console.log('serviceDisable', out)
   return out.match(/Removed /)
 }
-
+// requires root
 function refreshServices() {
-  const out = libexec.execOut('systemctl daemon reload')
+  const out = libexec.execOut('systemctl daemon-reload')
   // no out on sucess
   return out
 }

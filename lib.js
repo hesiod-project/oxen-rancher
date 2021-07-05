@@ -388,6 +388,7 @@ function areWeRunning(config) {
     } else {
       // so many calls
       // do we need to say this everytime?
+      // will be stale if launcher.cimode is true
       console.log('stale ' + config.launcher.var_path + '/launcher.pid (' + pid + '), removing...')
       // should we nuke this proven incorrect file? yes
       fs.unlinkSync(config.launcher.var_path + '/launcher.pid')

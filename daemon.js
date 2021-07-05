@@ -1368,6 +1368,8 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
   loki_daemon.storageFailures = {
 
   }
+  loki_daemon.status = {
+  }
   savePidConfig = {
     config: config,
     args: args,
@@ -1392,30 +1394,42 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       if (str.match(/subsystems, scanning blockchain from height/)) {
         console.log('blockchain subsystem loading')
         loadingSubsystems = true
+        loki_daemon.status.loadingSubsystems = true
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
       if (str.match(/... scanning height/)) {
         console.log('blockchain progress update')
         loadingSubsystems = true
+        loki_daemon.status.loadingSubsystems = true
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
       // 2020-09-28 01:47:50.074	I ... scanning height 121250 (4.9152s) (snl: 1.01874s; lns: 0s)
       // 2020-09-28 01:56:39.036	I Loading checkpoints
       if (str.match(/Loading checkpoints/)) {
         console.log('blockchain subsystem loaded')
         loadingSubsystems = false
+        loki_daemon.status.loadingSubsystems = false
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
 
       // syncingChain
       if (str.match(/SYNCHRONIZATION started/)) {
         console.log('blockchain sync started')
         syncingChain = true
+        loki_daemon.status.syncingChain = true
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
       if (str.match(/Synced/)) {
         // progress update
         syncingChain = true
+        loki_daemon.status.syncingChain = true
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
       if (str.match(/SYNCHRONIZED OK/)) {
         console.log('blockchain synchronized')
         syncingChain = false
+        loki_daemon.status.syncingChain = false
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
 
 

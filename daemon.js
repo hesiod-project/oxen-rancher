@@ -877,6 +877,15 @@ function startLauncherDaemon(config, interactive, entryPoint, args, debug, cb) {
               if (child) child.removeListener('close', crashHandler)
               process.exit()
             }
+            if (running.launcher && running.lokid && checklist.socketWorks !== 'waiting...' &&
+                  pids.runningConfig && blockchainIsFine
+                ) {
+              if (checklist.blockchain_status.split(/ /).includes('syncingChain')) {
+                console.log('Blockchain is syncing, likely will be a long time until storage/network will be ready, check status periodically')
+                if (child) child.removeListener('close', crashHandler)
+                process.exit()
+              }
+            }
             // if storage is enabled but not running, wait for it
             if (pids.runningConfig && pids.runningConfig.storage.enabled && checklist.storageServer === 'waiting...' && blockchainIsFine && networkIsFine) {
               // give it 30s more if everything else is fine... for what?

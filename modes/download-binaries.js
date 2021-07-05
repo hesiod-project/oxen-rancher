@@ -264,16 +264,20 @@ async function downloadGithubRepo(github_url, options, config, curVerStr, cb) {
       }
     }
 
-    if (os.platform() == 'linux') {
-      if (options.filename === 'lokinet' && options.notPrerelease) {
-        // get version number
-        //console.log('data', data)
-        const dirName = 'lokinet-linux-amd64-' + data.tag_name
-        options.ext = '.tar.xz'
-        const specialLokinetLinuxStaticBinaryUrl = 'https://oxen.rocks/oxen-io/loki-network/' + dirName + options.ext
-        downloadArchive(specialLokinetLinuxStaticBinaryUrl, config, options)
-        return
-      }
+    if (os.platform() !== 'linux') {
+      console.error('Sorry, platform', os.platform(), 'is not currently supported, please let us know you would like us to support this platform by opening an issue on github: https://github.com/hesiod-project/oxen-rancher/issues')
+      process.exit(1)
+    }
+    options.cb = cb
+
+    if (options.filename === 'lokinet' && options.notPrerelease) {
+      // get version number
+      //console.log('data', data)
+      const dirName = 'lokinet-linux-amd64-' + data.tag_name
+      options.ext = '.tar.xz'
+      const specialLokinetLinuxStaticBinaryUrl = 'https://oxen.rocks/oxen-io/loki-network/' + dirName + options.ext
+      downloadArchive(specialLokinetLinuxStaticBinaryUrl, config, options)
+      return
     }
     /*
     else {
@@ -282,19 +286,12 @@ async function downloadGithubRepo(github_url, options, config, curVerStr, cb) {
     }
     */
 
-    var search = 'UNKNOWN'
-    //if (os.platform() == 'darwin') search = 'osx'
-    //else
-    if (os.platform() == 'linux') search = 'linux'
-    else {
-      console.error('Sorry, platform', os.platform(), 'is not currently supported, please let us know you would like us to support this platform by opening an issue on github: https://github.com/hesiod-project/oxen-rancher/issues')
-      process.exit(1)
-    }
+    var search = 'linux'
     var platform = new RegExp(process.arch, 'i')
     var searchRE = new RegExp(search, 'i')
     var found = false // we only need one archive for our platform and we'll figure it out
+
     // FIXME do a final version check
-    options.cb = cb
     for(var i in data.assets) {
       var asset = data.assets[i]
       //console.log(i, 'asset', asset.browser_download_url)

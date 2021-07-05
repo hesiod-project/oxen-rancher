@@ -103,7 +103,7 @@ Cant detect blockchain version Error: Command failed: /opt/loki-launcher/bin/lok
       */
       // stderr seems to be already echo'd
       if (e.code === 'EACCES') {
-        console.error("Cannot detect blockchain version. Your current oxend binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+        console.error("Cannot detect blockchain version. Your current oxend binary does not have the correct permissions, please run: 'sudo oxen-rancher fix-perms USER' where USER is the username you run rancher as, usually snode")
       } else
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect blockchain version. Your current oxend binary does not support your CPU")
@@ -181,7 +181,7 @@ function getStorageVersion(config) {
       */
     } catch(e) {
       if (e.code === 'EACCES') {
-        console.error("Cannot detect storage version. Your current oxen-storage binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+        console.error("Cannot detect storage version. Your current oxen-storage binary does not have the correct permissions, please run: 'sudo oxen-rancher fix-perms USER' where USER is the username you run rancher as, usually snode")
       } else
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect storage version. Your current oxen-storage binary does not support your CPU")
@@ -206,7 +206,7 @@ function getNetworkVersion(config) {
       return networkVersion
     } catch(e) {
       if (e.code === 'EACCES') {
-        console.error("Cannot detect network version. Your current lokinet binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+        console.error("Cannot detect network version. Your current lokinet binary does not have the correct permissions, please run: 'sudo oxen-rancher fix-perms USER' where USER is the username you run rancher as, usually snode")
       } else
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect network version. Your current lokinet binary does not support your CPU")
@@ -364,7 +364,7 @@ function areWeRunning(config) {
       }
       // detect incorrectly parsed ps
       if (!foundPid) {
-        console.warn('Could not read your process-list to determine if pid', pid, 'is really launcher or not', stdout)
+        console.warn('Could not read your process-list to determine if pid', pid, 'is really rancher or not', stdout)
       } else
       if (!verifiedPid) {
         // what's worse?
@@ -374,7 +374,7 @@ function areWeRunning(config) {
         // check the socket...
         // well clear the pid file
         // is it just the launcher running?
-        console.warn('Could not verify that pid', pid, 'is actually the launcher by process title')
+        console.warn('Could not verify that pid', pid, 'is actually the rancher by process title')
         const pids = getPids(config)
         const blockchainIsRunning = pids.lokid && isPidRunning(pids.lokid)
         const networkIsRunning = config.network.enabled && pids.lokinet && isPidRunning(pids.lokinet)

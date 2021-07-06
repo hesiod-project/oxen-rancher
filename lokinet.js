@@ -136,7 +136,7 @@ function httpGet(url, cb) {
       path: urlDetails.path,
       timeout: 5000,
       headers: {
-        'User-Agent': 'Mozilla/5.0 Loki-launcher/' + VERSION
+        'User-Agent': 'Mozilla/5.0 Oxen-rancher/' + VERSION
       }
     }, (resp) => {
       //log('httpGet setting up handlers')
@@ -1356,7 +1356,7 @@ function checkConfig(config) {
         if (process.getgid() != 0) {
           console.error('')
           console.error(config.binary_path, 'does not have the correct setcap permissions: ', stdout)
-          console.error('Please run: "sudo loki-launcher fix-perms', os.userInfo().username, '" one time, so we can fix permissions on this binary!')
+          console.error('Please run: "sudo oxen-rancher fix-perms', os.userInfo().username, '" one time, so we can fix permissions on this binary!')
           console.error('shutting down...')
           console.error('')
           process.exit(1)
@@ -1429,7 +1429,7 @@ function startServiceNode(config, cb) {
   checkConfig(networkConfig)
   var version = lib.getNetworkVersion(config)
   if (version.match('lokinet-0.8.') || version.match('lokinet-0.9.')) {
-    console.log('Detected Lokinet-8.x')
+    console.log('Detected Lokinet-8.x+')
     networkConfig.ini_writer = generateSerivceNodeINI8
     networkConfig.requireModeParam = true
   } else {

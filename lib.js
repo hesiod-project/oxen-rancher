@@ -23,21 +23,27 @@ function hereDoc(f) {
 }
 
 const logo = hereDoc(function () {/*!
-        .o0l.
-       ;kNMNo.
-     ;kNMMXd'
-   ;kNMMXd'                 .ld:             ,ldxkkkdl,.     'dd;     ,odl.  ;dd
- ;kNMMXo.  'ol.             ,KMx.          :ONXkollokXN0c.   cNMo   .dNNx'   dMW
-dNMMM0,   ;KMMXo.           ,KMx.        .oNNx'      .dNWx.  :NMo .cKWk;     dMW
-'dXMMNk;  .;ONMMXo'         ,KMx.        :NMx.         oWWl  cNWd;ON0:.      oMW
-  'dXMMNk;.  ;kNMMXd'       ,KMx.        lWWl          :NMd  cNMNNMWd.       dMW
-    'dXMMNk;.  ;kNMMXd'     ,KMx.        :NMx.         oWWl  cNMKolKWO,      dMW
-      .oXMMK;   ,0MMMNd.    ,KMx.        .dNNx'      .dNWx.  cNMo  .dNNd.    dMW
-        .lo'  'dXMMNk;.     ,KMXxdddddl.   :ONNkollokXN0c.   cNMo    ;OWKl.  dMW
-            'dXMMNk;        .lddddddddo.     ,ldxkkkdl,.     'od,     .cdo;  ;dd
-          'dXMMNk;
-         .oNMNk;             __LABEL__
-          .l0l.
+__LABEL__
+
+                                       /;    ;\
+                                   __  \\____//
+                                  /{_\_/   `'\____
+                                  \___   (o)  (o  }
+       _____________________________/          :--'
+   ,-,'`@@@@@@@@       @@@@@@         \_    `__\
+  ;:(  @@@@@@@@@        @@@             \___(o'o)
+  :: )  @@@@          @@@@@@        ,'@@(  `===='
+  :: : @@@@@:          @@@@         `@@@:
+  :: \  @@@@@:       @@@@@@@)    (  '@@@'
+  ;; /\      /`,    @@@@@@@@@\   :@@@@@)
+  ::/  )    {_----------------:  :~`,~~;
+ ;;'`; :   )                  :  / `; ;
+;;;; : :   ;                  :  ;  ; :
+`'`' / :  :                   :  :  : :
+    )_ \__;      ";"          :_ ;  \_\       `,','
+    :__\  \    * `,'*         \  \  :  \   *  8`;'*  *
+        `^'     \ :/           `^'  `-^-'   \v/ :  \/
+Art by Bill Ames
 */});
 
 function getLogo(str) {
@@ -97,7 +103,7 @@ Cant detect blockchain version Error: Command failed: /opt/loki-launcher/bin/lok
       */
       // stderr seems to be already echo'd
       if (e.code === 'EACCES') {
-        console.error("Cannot detect blockchain version. Your current oxend binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+        console.error("Cannot detect blockchain version. Your current oxend binary does not have the correct permissions, please run: 'sudo oxen-rancher fix-perms USER' where USER is the username you run rancher as, usually snode")
       } else
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect blockchain version. Your current oxend binary does not support your CPU")
@@ -175,7 +181,7 @@ function getStorageVersion(config) {
       */
     } catch(e) {
       if (e.code === 'EACCES') {
-        console.error("Cannot detect storage version. Your current oxen-storage binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+        console.error("Cannot detect storage version. Your current oxen-storage binary does not have the correct permissions, please run: 'sudo oxen-rancher fix-perms USER' where USER is the username you run rancher as, usually snode")
       } else
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect storage version. Your current oxen-storage binary does not support your CPU")
@@ -200,7 +206,7 @@ function getNetworkVersion(config) {
       return networkVersion
     } catch(e) {
       if (e.code === 'EACCES') {
-        console.error("Cannot detect network version. Your current lokinet binary does not have the correct permissions, please run: 'sudo loki-launcher fix-perms USER' where USER is the username you run launcher as, usually snode")
+        console.error("Cannot detect network version. Your current lokinet binary does not have the correct permissions, please run: 'sudo oxen-rancher fix-perms USER' where USER is the username you run rancher as, usually snode")
       } else
       if (e.signal === 'SIGILL') {
         console.error("Cannot detect network version. Your current lokinet binary does not support your CPU")
@@ -358,7 +364,7 @@ function areWeRunning(config) {
       }
       // detect incorrectly parsed ps
       if (!foundPid) {
-        console.warn('Could not read your process-list to determine if pid', pid, 'is really launcher or not', stdout)
+        console.warn('Could not read your process-list to determine if pid', pid, 'is really rancher or not', stdout)
       } else
       if (!verifiedPid) {
         // what's worse?
@@ -368,7 +374,7 @@ function areWeRunning(config) {
         // check the socket...
         // well clear the pid file
         // is it just the launcher running?
-        console.warn('Could not verify that pid', pid, 'is actually the launcher by process title')
+        console.warn('Could not verify that pid', pid, 'is actually the rancher by process title')
         const pids = getPids(config)
         const blockchainIsRunning = pids.lokid && isPidRunning(pids.lokid)
         const networkIsRunning = config.network.enabled && pids.lokinet && isPidRunning(pids.lokinet)
@@ -382,7 +388,8 @@ function areWeRunning(config) {
     } else {
       // so many calls
       // do we need to say this everytime?
-      console.log('stale ' + config.launcher.var_path + '/launcher.pid, removing...')
+      // will be stale if launcher.cimode is true
+      console.log('stale ' + config.launcher.var_path + '/launcher.pid (' + pid + '), removing...')
       // should we nuke this proven incorrect file? yes
       fs.unlinkSync(config.launcher.var_path + '/launcher.pid')
       // FIXME: maybe have a lastrun file for debugging
@@ -419,6 +426,7 @@ function savePids(config, args, loki_daemon, lokinet, storageServer) {
     obj.blockchain_startedOptions = loki_daemon.startedOptions
     obj.blockchain_spawn_file     = loki_daemon.spawnfile
     obj.blockchain_spawn_args     = loki_daemon.spawnargs
+    obj.blockchain_status         = loki_daemon.status
   }
   if (storageServer && !storageServer.killed && storageServer.pid) {
     obj.storageServer      = storageServer.pid
@@ -745,6 +753,20 @@ async function getLauncherStatus(config, lokinet, offlineMessage, cb) {
       checklist.blockchain_rpc = offlineMessage
       checkDone('blockchain_rpc')
     }, 5000)
+
+    if (pids.blockchain_status) {
+      var status = []
+      if (pids.blockchain_status.loadingSubsystems) {
+        status.push('loadingSubsystems')
+      }
+      if (pids.blockchain_status.syncingChain) {
+        status.push('syncingChain')
+      }
+      if (status.length) {
+        checklist.blockchain_status = status.join(' ')
+      }
+    }
+
     // returns a promise now..
     try {
       var p = httpPost(url, '{}', function(data) {
@@ -872,19 +894,19 @@ function stopLokid(config) {
 function stopLauncher(config) {
   const systemdUtils = require(__dirname + '/modes/check-systemd')
   if (systemdUtils.isSystemdEnabled(config)) {
-    console.log('systemd lokid service is enabled')
+    //console.log('systemd lokid service is enabled')
     if (systemdUtils.isStartedWithSystemD()) {
-      console.log('systemd lokid service is active, stopping with systemd')
+      //console.log('systemd lokid service is active, stopping with systemd')
       // are we root?
       if (process.getuid() !== 0) {
-        console.log("this command isn't running as root, so can't stop launcher, run again with sudo")
+        //console.log("this command isn't running as root, so can't stop launcher, run again with sudo")
       } else {
         try {
           const stdoutBuf = execSync('systemctl stop lokid')
           console.log("launcher has been stopped")
           return
         } catch(e) {
-          console.log("stopping failed, falling back")
+          console.log("stopping via systemd failed, falling back")
         }
       }
     }
@@ -899,8 +921,9 @@ function stopLauncher(config) {
   if (pid) {
     // request launcher stop
     if (systemdUtils.isStartedWithSystemD()) {
-      console.warn('launcher was set up with systemd, and you will need to')
-      console.warn('"sudo systemctl stop lokid.service" before running this')
+      console.warn('launcher was set up with systemd, and you will need to run with sudo like')
+      //console.warn('"sudo systemctl stop lokid.service" before running this')
+      console.warn('"sudo oxen-rancher stop"')
       // or should we just return 0?
       process.exit(1)
     }
@@ -911,6 +934,7 @@ function stopLauncher(config) {
     // we quit too fast
     //require(__dirname + '/client')(config)
   } else {
+    // if no launcher...look for orphans
     var running = getProcessState(config)
     var pids = getPids(config)
     count += stopLokid(config)

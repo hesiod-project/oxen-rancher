@@ -1,0 +1,15 @@
+[Unit]
+Description=Oxen rancher service node
+After=network-online.target
+
+[Service]
+LimitNOFILE=16384
+Type=simple
+User=snode
+ExecStart=/root/loki-launcher-dev/index.js systemd-start
+Restart=always
+RestartSec=30s
+
+[Install]
+WantedBy=multi-user.target
+

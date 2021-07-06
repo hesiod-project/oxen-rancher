@@ -868,14 +868,24 @@ function startLauncherDaemon(config, interactive, entryPoint, args, debug, cb) {
             // blockchain rpc is now required for SN
 
             var blockchainIsFine = pids.runningConfig && pids.runningConfig.blockchain && checklist.blockchain_rpc !== 'waiting...'
-            var networkIsFine = (!pids.runningConfig) || (!pids.runningConfig.network) || (!pids.runningConfig.network.enabled) || (checklist.network !== 'waiting...')
+            // donish conditions
             if (running.launcher && running.lokid && checklist.socketWorks !== 'waiting...' &&
-                  pids.runningConfig && blockchainIsFine && networkIsFine &&
-                  checklist.storageServer !== 'waiting...' && checklist.storage_rpc !== 'waiting...'
+                  pids.runningConfig && blockchainIsFine
                 ) {
-              console.log('Start up successful!')
-              if (child) child.removeListener('close', crashHandler)
-              process.exit()
+              if (checklist.blockchain_status && checklist.blockchain_status.split(/ /).includes('syncingChain')) {
+                console.log('Blockchain is syncing, likely will be a long time until storage/network will be ready, check status periodically')
+                if (child) child.removeListener('close', crashHandler)
+                process.exit()
+              }
+              var networkIsFine = (!pids.runningConfig) || (!pids.runningConfig.network) || (!pids.runningConfig.network.enabled) || (checklist.network !== 'waiting...')
+              if (running.launcher && running.lokid && checklist.socketWorks !== 'waiting...' &&
+                    pids.runningConfig && blockchainIsFine && networkIsFine &&
+                    checklist.storageServer !== 'waiting...' && checklist.storage_rpc !== 'waiting...'
+                  ) {
+                console.log('Start up successful!')
+                if (child) child.removeListener('close', crashHandler)
+                process.exit()
+              }
             }
             // if storage is enabled but not running, wait for it
             if (pids.runningConfig && pids.runningConfig.storage.enabled && checklist.storageServer === 'waiting...' && blockchainIsFine && networkIsFine) {
@@ -1243,6 +1253,7 @@ function configureLokid(config, args) {
     //console.log('set?', key, ':', value)
     // remove any previous setting
     normalizeArgs = normalizeArgs.filter(item => {
+      // get key name
       var parts = item.replace(/^--/, '').split(/=/)
       var newSet = key !== parts.shift()
       if (!newSet) {
@@ -1273,7 +1284,7 @@ function configureLokid(config, args) {
         // if last was --!=
         // now removeDashes is definitely not a value
         // codify no value...
-        normalizeSet(last, '__REMOVE_ME__', false)
+        normalizeSet(last, '__REMOVE_ME__')
         last = null
       }
       var removeDashes = arg.replace(/^--/, '')
@@ -1281,7 +1292,7 @@ function configureLokid(config, args) {
         var parts = removeDashes.split(/=/)
         var key = parts.shift()
         var value = parts.join('=')
-        normalizeSet(key, value, false)
+        normalizeSet(key, value)
         last = null
       } else {
         // read next to make a decision
@@ -1289,14 +1300,18 @@ function configureLokid(config, args) {
       }
     } else {
       // hack to allow equal to be optional..
-      if (last != null) {
+      if (last !== null) {
         // should stitch together last = arg
-        normalizeSet(last, arg, true)
+        normalizeSet(last, arg)
       }
       last = null
     }
   }
   //console.log('last', last)
+  // flush the last if it's --testnet
+  if (last !== null) {
+    normalizeSet(last, '__REMOVE_ME__')
+  }
   // and process them as such...
   //console.log('normalized args', normalizeArgs)
   lokid_options = normalizeArgs.map(str => str.replace('=__REMOVE_ME__', ''))
@@ -1368,6 +1383,8 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
   loki_daemon.storageFailures = {
 
   }
+  loki_daemon.status = {
+  }
   savePidConfig = {
     config: config,
     args: args,
@@ -1392,30 +1409,42 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       if (str.match(/subsystems, scanning blockchain from height/)) {
         console.log('blockchain subsystem loading')
         loadingSubsystems = true
+        loki_daemon.status.loadingSubsystems = true
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
       if (str.match(/... scanning height/)) {
         console.log('blockchain progress update')
         loadingSubsystems = true
+        loki_daemon.status.loadingSubsystems = true
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
       // 2020-09-28 01:47:50.074	I ... scanning height 121250 (4.9152s) (snl: 1.01874s; lns: 0s)
       // 2020-09-28 01:56:39.036	I Loading checkpoints
       if (str.match(/Loading checkpoints/)) {
         console.log('blockchain subsystem loaded')
         loadingSubsystems = false
+        loki_daemon.status.loadingSubsystems = false
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
 
       // syncingChain
       if (str.match(/SYNCHRONIZATION started/)) {
         console.log('blockchain sync started')
         syncingChain = true
+        loki_daemon.status.syncingChain = true
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
       if (str.match(/Synced/)) {
         // progress update
         syncingChain = true
+        loki_daemon.status.syncingChain = true
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
       if (str.match(/SYNCHRONIZED OK/)) {
         console.log('blockchain synchronized')
         syncingChain = false
+        loki_daemon.status.syncingChain = false
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
 
 
@@ -1437,7 +1466,7 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       if (str.match(/Sync data returned a new top block candidate/)) {
         // these are normal, however too many in a row could mean a stall
         // especially combined with difficulty recalc
-        console.warn('no blockchain communication with other nodes, something maybe wrong...')
+        console.warn('no blockchain communication with other nodes, something maybe wrong or it\'s about to start a sync...')
       }
 
       // we can get 3-4 before loki-storage pings a fresh restart

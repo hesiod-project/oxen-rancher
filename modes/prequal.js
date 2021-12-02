@@ -250,7 +250,7 @@ module.exports = function(config, debug, timeout) {
           port: config.network.public_port
         },
       ]
-      networkTest.createClient('na.testing.lokinet.org', 3000, async function(client) {
+      networkTest.createClient('testing.hesiod.network', 3000, async function(client) {
         if (client === false) {
           console.warn('We could not connect to our testing server, please try again later')
           process.exit()

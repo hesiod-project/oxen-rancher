@@ -270,7 +270,7 @@ function launcherStorageServer(config, args, cb) {
     optionals.push('--data-dir', config.storage.data_dir)
   }
   // BLOCKCHAIN communication
-  if (configUtil.isStorageBinary21X(config) || configUtil.isStorageBinary22X(config)) {
+  if (configUtil.isStorageBinary21X(config) || configUtil.isStorageBinary22X(config)  || configUtil.isStorageBinary23X(config)) {
     if (config.storage.oxend_rpc_socket) {
       optionals.push('--oxend-rpc', config.storage.oxend_rpc_socket)
     }
@@ -1639,10 +1639,12 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       if (loki_daemon.lastHeight) {
         if (loki_daemon.lastHeight === info.result.height) {
           loki_daemon.heightStuckCounter++;
+          // 3
           if (loki_daemon.heightStuckCounter > 3) {
             console.log('LAUNCHER: blockchain has detected a slow block or stall', info.result.height, 'for', loki_daemon.heightStuckCounter, 'tests now')
           }
           // 40 mins of being stuck
+          // 10
           if (loki_daemon.heightStuckCounter > 10) {
             console.log('LAUNCHER: detected stuck blockchain, restarting')
             requestBlockchainRestart(config)

@@ -388,6 +388,11 @@ function isStorageBinary22X(config) {
   return binaryVersion.match(/v2.2/)
 }
 
+function isStorageBinary23X(config) {
+  const binaryVersion = lib.getStorageVersion(config)
+  return binaryVersion.match(/v2.3/)
+}
+
 function checkLauncherConfig(config) {
   if (config.network === undefined) config.network = {}
   if (config.storage === undefined) config.storage = {}
@@ -1034,6 +1039,7 @@ module.exports = {
   isStorageBinary2X: isStorageBinary2X,
   isStorageBinary21X: isStorageBinary21X,
   isStorageBinary22X: isStorageBinary22X,
+  isStorageBinary23X: isStorageBinary23X,
   blockchainIsDefaultRPCPort: blockchainIsDefaultRPCPort,
   blockchainIsDefaultP2PPort: blockchainIsDefaultP2PPort,
   blockchainIsDefaultQunPort: blockchainIsDefaultQunPort,

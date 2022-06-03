@@ -699,6 +699,7 @@ async function continueStart() {
     case 'donwload-bianres':
     case 'download-binares':
     case 'downlaod-binaries':
+    case 'downloa-binaries':
     case 'dlb':
     case 'dowload-binaries':
     case 'downloadb-inaries':

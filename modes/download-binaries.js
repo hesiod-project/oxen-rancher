@@ -132,11 +132,12 @@ function downloadArchive(url, config, options) {
 
       lib.waitForLauncherStop(config, function() {
         //waitForBinaryToBeDeadAndExtract()
-        var extractPath = '--strip-components=1 ' + baseArchDir + '/' + filename
+        //' + baseArchDir + '/' + filename
+        var extractPath = '--strip-components=1  --wildcards "*' + filename + '"'
         if (options.useDir === false) {
           extractPath = filename
         }
-        var commandLine = 'tar xvf '+tmpPath+' -C /opt/loki-launcher/bin '+extractPath
+        var commandLine = 'tar xvf '+tmpPath+' -C /opt/loki-launcher/bin ' + extractPath
         console.log('Untarring')
         // FIXME: linux can't extract zips like this (but macos can)
         exec(commandLine, (err, stdout, stderr) => {
@@ -319,6 +320,25 @@ async function downloadGithubRepo(github_url, options, config, curVerStr, cb) {
         }
       }
     }
+    // one additional pass
+    if (!found) {
+      for(var i in data.assets) {
+        var asset = data.assets[i]
+        // 10.1 series removed architecture
+        //  && asset.browser_download_url.match(/-x64-/i)
+        // and removed platform too
+        // && asset.browser_download_url.match(searchRE)
+        // only needed for lokinet, oxen-core has platform but not architecture
+        if (search == 'linux' && asset.browser_download_url.match(/\.tar.xz$/i)) {
+          // linux
+          options.ext = '.tar.xz'
+          downloadArchive(asset.browser_download_url, config, options)
+          found = true
+        //} else {
+          //console.log('skipping', asset.browser_download_url, searchRE, '.tar.xz')
+        }
+      }
+    }
     if (!found) {
       if (options.skips === undefined) options.skips = []
       options.skips.push(data.name)
@@ -369,7 +389,7 @@ function start(config, options) {
     baseOptions = {}
     baseOptions[options.prerel ? 'prereleaseOnly': 'notPrerelease'] = true
 
-    if (config.blockchain.network == 'test' || config.blockchain.network == 'demo' || config.blockchain.network == 'staging') {
+    if (config.blockchain.network == 'test' || config.blockchain.network == 'staging') {
       downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-network/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
         start_retries = 0
         lokinet.checkConfig(config) // setcap
@@ -381,7 +401,7 @@ function start(config, options) {
         })
       })
     } else {
-      downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-network/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
+      downloadGithubRepo('https://api.github.com/repos/oxen-io/lokinet/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
         start_retries = 0
         lokinet.checkConfig(config) // setcap
         downloadGithubRepo('https://api.github.com/repos/oxen-io/oxen-storage-server/releases', { filename: 'oxen-storage', useDir: true, ...baseOptions }, config, lib.getStorageVersion(config), function() {

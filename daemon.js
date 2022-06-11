@@ -1779,10 +1779,11 @@ function handleInput(line) {
         storageLogging = true
       }
     }
-    if (line.match(/^prepare_registration/)) {
-      inPrepareReg = true
-    }
     return true
+  }
+  if (line.match(/^prepare_registration/)) {
+    inPrepareReg = true
+    // has to return false
   }
   // FIXME: it'd be nice to disable the periodic status report msgs in interactive too
   return false

@@ -20,7 +20,7 @@ dNMMM0,   ;KMMXo.           ,KMx.        .oNNx'      .dNWx.  :NMo .cKWk;     dMW
 
 # Requirements
 
-- [nodejs](https://nodejs.org/en/) versions 8.x to 14.x are supported
+- [nodejs](https://nodejs.org/en/) versions 8.x to 18.x are supported
 - [npm](https://www.npmjs.com/get-npm) usually installed with nodejs (only for distribution and easy install of this software, we do not use ANY external NPMs for security reasons)
 - Linux (though macos does works and Windows kind of works)
 - xz (xz-utils apt package) to be able to download and extract updated Linux binaries
@@ -107,11 +107,11 @@ And be sure to make sure you restart your service node (if it's staked) by
 
 ### CentOS NodeJS installation:
 
-`curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -`
+`curl -sL https://rpm.nodesource.com/setup_18.x | sudo bash -`
 
 ### Ubuntu/Debian NodeJS installation:
 
-`curl -sL https://deb.nodesource.com/setup_12.x | sudo bash -`
+`curl -sL https://deb.nodesource.com/setup_18.x | sudo bash -`
 
 then
 

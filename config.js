@@ -288,7 +288,13 @@ var binary3xCache = null
 var binary4Xor5XCache = null
 var binary7xCache = null
 var binary8xCache = null
+var binary9xCache = null
+var binary10xCache = null
 var versionCache = false
+
+let bcVerMaj = 0
+let bcVerMin = 0
+let bcVerPtc = 0
 
 function getLokidVersion(config) {
   if (versionCache !== false) return versionCache
@@ -301,12 +307,20 @@ function getLokidVersion(config) {
         // if we can't get it, maybe assume the latest?
         return false;
       }
+      var parts = lokid_version.split('(v')
+      var parts2 = parts[1].split('-release')
+      var verParts = parts2[0].split('.')
+      //console.log('oxend verssion', verParts)
+      bcVerMaj = parseInt(verParts[0])
+      bcVerMin = parseInt(verParts[1])
+      bcVerPtc = parseInt(verParts[2])
       //console.log('lokid_version', lokid_version)
       binary3xCache = lokid_version.match(/v3\.0/)?true:false
       binary4Xor5XCache = lokid_version.match(/v[54]\./)?true:false
       binary7xCache = lokid_version.match(/v7\./)?true:false
       binary8xCache = lokid_version.match(/v8\./)?true:false
       binary9xCache = lokid_version.match(/v9\./)?true:false
+      binary10xCache = lokid_version.match(/v10\./)?true:false
       versionCache = lokid_version
       return lokid_version
     } catch(e) {
@@ -320,57 +334,64 @@ function getLokidVersion(config) {
     binary7xCache = undefined
     binary8xCache = undefined
     binary9xCache = undefined
+    binary10xCache = undefined
   }
   return false;
 }
 
 function isBlockchainBinary3X(config) {
-  if (binary3xCache !== null) return binary3xCache
-  getLokidVersion(config)
-  return binary3xCache
+  if (!bcVerMaj) {
+    getLokidVersion(config)
+  }
+  return bcVerMaj === 3
 }
 
 function isBlockchainBinary4Xor5X(config) {
-  if (binary4Xor5XCache !== null) return binary4Xor5XCache
-  getLokidVersion(config)
-  return binary4Xor5XCache
+  if (!bcVerMaj) {
+    getLokidVersion(config)
+  }
+  return bcVerMaj === 4 || bcVerMaj === 5
 }
 
 function isBlockchainBinary7X(config) {
-  if (binary7xCache !== null) return binary7xCache
-  getLokidVersion(config)
-  return binary7xCache
+  if (!bcVerMaj) {
+    getLokidVersion(config)
+  }
+  return bcVerMaj === 7
 }
 
 function isBlockchainBinary8X(config) {
-  if (binary8xCache !== null) return binary8xCache
-  getLokidVersion(config)
-  return binary8xCache
+  if (!bcVerMaj) {
+    getLokidVersion(config)
+  }
+  return bcVerMaj === 8
 }
 
 // socket change
 function blockchainBinaryAfter813(config) {
-  const version = getLokidVersion(config)
-  // FIXME: parse out the semvar string so we can use math
-  //if (version.match(/v9/) || version.match(/v10/) || version.match(/v11/)) {
-  //}
-  // 9x needs to return true
-  if (binary9xCache) {
-    return true
+  if (!bcVerMaj) {
+    getLokidVersion(config)
   }
-  if (binary8xCache) {
-    if (version.match(/v8.1.0/) || version.match(/v8.1.1/) || version.match(/v8.1.2/)) {
-      return false
-    }
-    return true
-  }
-  return false
+  const isNwr8 = bcVerMaj > 8
+  const is8 = bcVerMaj === 8
+  const is8New82 = bcVerMin > 1
+  const isNot80 = bcVerMin !== 0
+  const is8New812 = bcVerPtc > 2
+  return isNwr8 || (is8 && (is8New82 || (isNot80 && is8New812)))
 }
 
 function blockchainBinary9X(config) {
-  if (binary9xCache !== null) return binary9xCache
-  getLokidVersion(config)
-  return binary9xCache
+  if (!bcVerMaj) {
+    getLokidVersion(config)
+  }
+  return bcVerMaj === 9
+}
+
+function blockchainBinary10X(config) {
+  if (!bcVerMaj) {
+    getLokidVersion(config)
+  }
+  return bcVerMaj === 10
 }
 
 function isStorageBinary2X(config) {

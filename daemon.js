@@ -1610,11 +1610,11 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       loki_daemon.stdin.write("\n")
     }
     // schedule next flush
-    loki_daemon.outputFlushTimer = setTimeout(flushOutput, 1000)
+    //loki_daemon.outputFlushTimer = setTimeout(flushOutput, 1000)
   }
   // disable until we can detect prepare_reg
   // don't want to accidentally launch with prepare_reg broken
-  loki_daemon.outputFlushTimer = setTimeout(flushOutput, 1000)
+  //loki_daemon.outputFlushTimer = setTimeout(flushOutput, 1000)
 
   loki_daemon.getHeightTimer = false
   loki_daemon.lastHeight = 0

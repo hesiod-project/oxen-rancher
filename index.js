@@ -143,7 +143,7 @@ async function continueStart() {
   // interactive, start because user facing and we'll want the version in logs
   // may want to it in '' to give more screen space to help
   const showLogoCommands = [
-    'prequal', 'download-binaries', 'versions', 'config-view', 'client'
+    'prequal', 'download-binaries', 'version', 'versions', 'config-view', 'client'
   ]
   const showVersionCommands = [
     'prequal', 'interactive', 'start', 'daemon-start'

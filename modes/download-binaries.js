@@ -389,22 +389,21 @@ function start(config, options) {
     baseOptions = {}
     baseOptions[options.prerel ? 'prereleaseOnly': 'notPrerelease'] = true
 
-    if (config.blockchain.network == 'test' || config.blockchain.network == 'demo' || config.blockchain.network == 'staging') {
+    if (config.blockchain.network == 'test' || config.blockchain.network == 'staging') {
       downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-network/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
         start_retries = 0
         lokinet.checkConfig(config) // setcap
         downloadGithubRepo('https://api.github.com/repos/oxen-io/oxen-storage-server/releases', { filename: 'oxen-storage', useDir: true, ...baseOptions }, config, lib.getStorageVersion(config), function() {
           start_retries = 0
           downloadGithubRepo('https://api.github.com/repos/oxen-io/oxen-core/releases', { filename: 'oxend', useDir: true, ...baseOptions }, config, lib.getBlockchainVersion(config), function() {
-          //downloadGithubRepo('https://api.github.com/repos/loki-project/loki-core/releases', { filename: 'oxend', useDir: true, ...baseOptions }, config, lib.getBlockchainVersion(config), function() {
             resolve()
           })
         })
       })
     } else {
-      downloadGithubRepo('https://api.github.com/repos/oxen-io/loki-network/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
+      downloadGithubRepo('https://api.github.com/repos/oxen-io/lokinet/releases', { filename: 'lokinet', useDir: true, ...baseOptions }, config, lib.getNetworkVersion(config), function() {
         start_retries = 0
-        //lokinet.checkConfig(config) // setcap
+        lokinet.checkConfig(config) // setcap
         downloadGithubRepo('https://api.github.com/repos/oxen-io/oxen-storage-server/releases', { filename: 'oxen-storage', useDir: true, ...baseOptions }, config, lib.getStorageVersion(config), function() {
           start_retries = 0
           /*

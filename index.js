@@ -724,9 +724,10 @@ async function continueStart() {
     break;
     case 'export': // official
       // doesn't have to be root or stopped, just need read access
-
-      if (!fs.existsSync(config.blockchain.lokid_key)) {
-        console.log(config.blockchain.lokid_key, "does not exist, this has not been run as a service node yet")
+      var oldKey = config.blockchain.lokid_key
+      var edKey = config.blockchain.lokid_edkey
+      if (!fs.existsSync(oldKey) && !fs.existsSync(edKey)) {
+        console.log(oldKey, 'and', edKey, "do not exist, this has not been run as a service node yet")
         process.exit()
       }
 

@@ -18,8 +18,12 @@ function start(config, options) {
     execSync('tar -C '+dir+' -rf ' + filename + ' ' + stripFile)
   }
   console.log('exporting blockchain keys')
-  addFile(config.blockchain.lokid_key, config.blockchain.data_dir)
-  addFile(config.blockchain.lokid_edkey, config.blockchain.data_dir)
+  if (fs.existsSync(config.blockchain.lokid_key)) {
+    addFile(config.blockchain.lokid_key, config.blockchain.data_dir)
+  }
+  if (fs.existsSync(config.blockchain.lokid_edkey)) {
+    addFile(config.blockchain.lokid_edkey, config.blockchain.data_dir)
+  }
   console.log('exporting network keys')
   addFile(config.network.data_dir + '/encryption.private', config.network.data_dir)
   addFile(config.network.data_dir + '/transport.private', config.network.data_dir)

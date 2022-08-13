@@ -13,33 +13,39 @@ const spawn = cp.spawn
 const execSync = cp.execSync
 const stdin = process.openStdin()
 
+// use this to debug the EPIPEs
 //const longjohn = require('longjohn')
-
-const VERSION = 0.2
-//console.log('loki daemon library version', VERSION, 'registered')
 
 let g_config = false
 let server = false
 let webApiServer = false
-process.on('uncaughtException', function (err) {
-  console.trace('Caught exception:', err)
-  let var_path = '/tmp'
-  if (g_config) var_path = g_config.launcher.var_path
-  fs.appendFileSync(var_path + '/launcher_exception.log', JSON.stringify({
-    err: err,
-    code: err.code,
-    msg: err.message,
-    trace: err.stack.split("\n")
-  }) + "\n")
-  // if we're in cimode, throw up red flag
-  if (savePidConfig.config && savePidConfig.config.launcher.cimode) {
-    process.exit(1)
-  }
-})
+// start but not anything else (interactive, daemon-start)
+if (1) {
+  process.on('uncaughtException', function (err) {
+    // might be amplifying the write EPIPE error
+    //console.trace('Caught exception:', err)
+    let var_path = '/tmp'
+    if (g_config) var_path = g_config.launcher.var_path
+    fs.appendFileSync(var_path + '/launcher_exception.log', JSON.stringify({
+      err: err,
+      code: err.code,
+      msg: err.message,
+      trace: err.stack.split("\n")
+    }) + "\n")
+    // if we're in cimode, throw up red flag
+    if (savePidConfig.config && savePidConfig.config.launcher.cimode) {
+      process.exit(1)
+    }
+    // we can't have this be looped written to the log...
+/*
+{"err":{"errno":-32,"code":"EPIPE","syscall":"write"},"code":"EPIPE","msg":"write EPIPE","trace":["Error: write EPIPE","    at afterWriteDispatched
+*/
+  })
+}
 
 let connections = []
 function disconnectAllClients() {
-  console.log('SOCKET: Disconnecting all', connections.length, 'clients.')
+  //console.log('SOCKET: Disconnecting all', connections.length, 'clients.')
   for(let i in connections) {
     const conn = connections[i]
     if (!conn.destroyed) {
@@ -80,7 +86,7 @@ function waitfor_blockchain_shutdown(cb) {
 function shutdown_blockchain() {
   if (loki_daemon) {
     if (loki_daemon.outputFlushTimer) {
-      clearInterval(loki_daemon.outputFlushTimer)
+      clearTimeout(loki_daemon.outputFlushTimer)
       loki_daemon.outputFlushTimer = null
     }
   }
@@ -152,7 +158,7 @@ function shutdown_everything() {
           // it can and does, if shutdown is called before lokid exits...
           // sig handler?
           //console.log('Should never hit me')
-          clearInterval(loki_daemon.outputFlushTimer)
+          clearTimeout(loki_daemon.outputFlushTimer)
           loki_daemon.outputFlushTimer = null
         }
       }
@@ -163,7 +169,7 @@ function shutdown_everything() {
         stop = false
       } else {
         if (server) {
-          console.log('SOCKET: Closing socket server.')
+          //console.log('SOCKET: Closing socket server.')
           disconnectAllClients()
           server.close()
           server.unref()
@@ -387,7 +393,8 @@ function launcherStorageServer(config, args, cb) {
             // save some logging space
             continue
           }
-          if (storageLogging) console.log(`STORAGE(Start): ${tline}`)
+          // can't do this if backgrounded
+          //if (storageLogging) console.log(`STORAGE(Start): ${tline}`)
         }
         stdout += data
       } else {
@@ -499,7 +506,7 @@ function launcherStorageServer(config, args, cb) {
             //communicate this out
             lib.savePids(config, args, loki_daemon, lokinet, storageServer)
           }
-          if (storageLogging && outputError) console.log(`STORAGE: ${logLinesStr}`)
+          //if (storageLogging && outputError) console.log(`STORAGE: ${logLinesStr}`)
         }
       }
       //if (storageLogging) console.log(`STORAGE: ${logLinesStr}`)
@@ -527,7 +534,7 @@ function launcherStorageServer(config, args, cb) {
   }
 
   function startupComplete() {
-    console.log('STORAGE: Turning off storage server start up watcher, starting watchdog')
+    //console.log('STORAGE: Turning off storage server start up watcher, starting watchdog')
     collectData = false
     stdout = ''
     stderr = ''
@@ -1395,7 +1402,7 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
   if (!interactive && !config.blockchain.quiet) {
     // why is the banner held back until we connect!?
     loki_daemon.stdout.on('data', (data) => {
-      console.log(`blockchainRAW: ${data}`)
+      //console.log(`blockchainRAW: ${data}`)
 
       var str = data.toString()
 
@@ -1442,7 +1449,7 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
         lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
       if (str.match(/SYNCHRONIZED OK/)) {
-        console.log('blockchain synchronized')
+        //console.log('blockchain synchronized')
         syncingChain = false
         loki_daemon.status.syncingChain = false
         lib.savePids(config, args, loki_daemon, lokinet, storageServer)
@@ -1546,7 +1553,7 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
         shuttingDownRestart: true // set something we can modify behavior on
       }
     }
-    console.warn(`BLOCKCHAIN: loki_daemon process exited with code ${code}/${signal} after`, (Date.now() - loki_daemon.startTime)+'ms')
+    //console.warn(`BLOCKCHAIN: loki_daemon process exited with code ${code}/${signal} after`, (Date.now() - loki_daemon.startTime)+'ms')
     // invalid param gives a code 1
     // code 0 means clean shutdown
     if (code === 0) {
@@ -1779,10 +1786,12 @@ function handleInput(line) {
         storageLogging = true
       }
     }
-    if (line.match(/^prepare_registration/)) {
-      inPrepareReg = true
-    }
     return true
+  }
+  if (line.match(/^prepare_registration/)) {
+    clearTimeout(loki_daemon.outputFlushTimer)
+    inPrepareReg = true
+    // has to return false
   }
   // FIXME: it'd be nice to disable the periodic status report msgs in interactive too
   return false
@@ -1846,7 +1855,7 @@ function startLokid(config, args) {
     // we're non-interactive, set up socket server
     console.log('SOCKET: Starting')
     server = net.createServer((c) => {
-      console.log('SOCKET: Client connected.')
+      //console.log('SOCKET: Client connected.')
       connections.push(c)
       c.setEncoding('utf8')
       c.on('end', () => {
@@ -1881,8 +1890,10 @@ function startLokid(config, args) {
         console.log('SOCKET: got', stripped)
         if (handleInput(stripped)) return
         if (loki_daemon && !loki_daemon.killed) {
-          console.log('SOCKET: Sending to lokid.')
-          loki_daemon.stdin.write(data + "\n")
+          console.log('SOCKET: Sending to lokid.', data)
+          // we don't need the + "\n" in 10.x+
+          //+ "\n"
+          loki_daemon.stdin.write(data)
         }
       })
       c.write('Connection successful\n')
@@ -1979,12 +1990,12 @@ function setupHandlers() {
   })
   // ctrl-c
   process.on('SIGINT', function () {
-    console.log('LAUNCHER daemon got SIGINT (ctrl-c)')
+    //console.log('LAUNCHER daemon got SIGINT (ctrl-c)')
     shutdown_everything()
   })
   // -15
   process.on('SIGTERM', function () {
-    console.log('LAUNCHER daemon got SIGTERM (kill -15)')
+    //console.log('LAUNCHER daemon got SIGTERM (kill -15)')
     shutdown_everything()
   })
   handlersSetup = true

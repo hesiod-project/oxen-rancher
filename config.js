@@ -399,19 +399,9 @@ function isStorageBinary2X(config) {
   return binaryVersion.match(/v2/)
 }
 
-function isStorageBinary21X(config) {
+function isStorageBinary20X(config) {
   const binaryVersion = lib.getStorageVersion(config)
-  return binaryVersion.match(/v2.1/)
-}
-
-function isStorageBinary22X(config) {
-  const binaryVersion = lib.getStorageVersion(config)
-  return binaryVersion.match(/v2.2/)
-}
-
-function isStorageBinary23X(config) {
-  const binaryVersion = lib.getStorageVersion(config)
-  return binaryVersion.match(/v2.3/)
+  return binaryVersion.match(/v2.0/)
 }
 
 function checkLauncherConfig(config) {
@@ -1058,9 +1048,7 @@ module.exports = {
   isBlockchainBinary8X: isBlockchainBinary8X,
   blockchainBinaryAfter813: blockchainBinaryAfter813,
   isStorageBinary2X: isStorageBinary2X,
-  isStorageBinary21X: isStorageBinary21X,
-  isStorageBinary22X: isStorageBinary22X,
-  isStorageBinary23X: isStorageBinary23X,
+  isStorageBinary20X: isStorageBinary20X,
   blockchainIsDefaultRPCPort: blockchainIsDefaultRPCPort,
   blockchainIsDefaultP2PPort: blockchainIsDefaultP2PPort,
   blockchainIsDefaultQunPort: blockchainIsDefaultQunPort,

@@ -276,7 +276,8 @@ function launcherStorageServer(config, args, cb) {
     optionals.push('--data-dir', config.storage.data_dir)
   }
   // BLOCKCHAIN communication
-  if (configUtil.isStorageBinary21X(config) || configUtil.isStorageBinary22X(config)  || configUtil.isStorageBinary23X(config)) {
+  if (configUtil.isStorageBinary2X(config) && !configUtil.isStorageBinary20X(config)) {
+    // 2.1+
     if (config.storage.oxend_rpc_socket) {
       optionals.push('--oxend-rpc', config.storage.oxend_rpc_socket)
     }

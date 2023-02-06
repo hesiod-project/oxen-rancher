@@ -749,6 +749,7 @@ function applyConfig(file_config, config_obj) {
   if (file_config.log_path) {
     // make sure section is created
     if (config_obj.logging === undefined) config_obj.logging = {}
+    config_obj.logging.type = 'file'
     config_obj.logging.file = file_config.log_path
   }
   // metrics section
@@ -993,7 +994,7 @@ function generateSerivceNodeINI8(config, cb) {
       netdb: {
       }, */
       bind: {
-        // will be set after
+        inbound: ':' + (config.public_port),
       },
       /*
       network: {
@@ -1039,9 +1040,10 @@ function generateSerivceNodeINI8(config, cb) {
     }
     // we could just leave this blank
     // it defaults to *=0
-    runningConfig.bind[params.lokinet_nic] = config.public_port
+    //runningConfig.bind[params.lokinet_nic] = config.public_port
     if (config.internal_port) {
-      runningConfig.bind[params.lokinet_nic] = config.internal_port
+      //runningConfig.bind[params.lokinet_nic] = config.internal_port
+      runningConfig.bind.outbound = ':' + config.internal_port
     }
     applyConfig(config, runningConfig)
     // The config option [network]:profiles is deprecated and has been ignored.

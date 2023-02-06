@@ -473,7 +473,7 @@ module.exports = function(args, config, entryPoint, debug) {
       } else {
         // port is open
         if (isNothingRunning(running)) {
-          console.log("LAUNCHER: Starting fresh copy of Loki Suite.")
+          console.log("LAUNCHER: Starting fresh copy of Oxen Suite.")
           startEverything(config, args)
           return
         }
@@ -483,7 +483,7 @@ module.exports = function(args, config, entryPoint, debug) {
     return
   }
   if (isNothingRunning(running)) {
-    console.log("LAUNCHER: Starting fresh copy of Loki Suite.")
+    console.log("LAUNCHER: Starting fresh copy of Oxen Suite.")
     startEverything(config, args)
     return
   }
@@ -583,14 +583,14 @@ module.exports = function(args, config, entryPoint, debug) {
     }
   }
 
-  console.log('RECOVERY: Waiting for loki key at', config.storage.lokid_key)
+  console.log('RECOVERY: Waiting for oxen key at', config.storage.lokid_key)
   waitForLokiKey(config, 30 * 1000, undefined, function(haveKey) {
     if (!haveKey) {
-      console.error('DAEMON: Timeout waiting for loki key.')
+      console.error('DAEMON: Timeout waiting for oxen key.')
       // FIXME: what do?
       return
     }
-    console.log('RECOVERY: Got loki key!')
+    console.log('RECOVERY: Got oxen key!')
 
     // figure out how to recover state with a running lokid
     if (config.network.enabled && !running.lokinet) {

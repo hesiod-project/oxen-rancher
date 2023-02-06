@@ -444,7 +444,20 @@ function savePids(config, args, loki_daemon, lokinet, storageServer) {
     obj.network_spawn_args = lokinet_daemon.spawnargs
     obj.network_blockchain_failures = lokinet_daemon.blockchainFailures
   }
-  fs.writeFileSync(config.launcher.var_path + '/pids.json', JSON.stringify(obj))
+  const path = config.launcher.var_path + '/pids.json'
+  if (fs.existsSync(config.launcher.var_path + '/pids.json')) {
+    fs.access(path, fs.W_OK, function(err) {
+      if (err) {
+        console.error('lib::savePIds - err', err)
+      } else {
+        // node 14.x, would stop processing here if own by root and running as snode
+        fs.writeFileSync(path, JSON.stringify(obj))
+      }
+    })
+  } else {
+    // just make it...
+    fs.writeFileSync(path, JSON.stringify(obj))
+  }
 }
 
 function getPids(config) {
@@ -661,9 +674,10 @@ async function runNetworkRPCTest(config, cb) {
 // won't take longer than 5s
 // offlineMessage is waiting... or offline
 async function getLauncherStatus(config, lokinet, offlineMessage, cb) {
+  //console.debug('getLauncherStatus start')
   var checklist = {}
   var running = getProcessState(config)
-  //console.log('getLauncherStatus running', running)
+  //console.debug('getLauncherStatus running', running)
   // pid...
   checklist.launcher = running.launcher ? ('running as ' + running.launcher) : offlineMessage
   checklist.blockchain = running.lokid ? ('running as ' + running.lokid) : offlineMessage
@@ -696,18 +710,19 @@ async function getLauncherStatus(config, lokinet, offlineMessage, cb) {
   const donePromise = new Promise(res => {
     doneResolver = res
   })
+  //console.debug('initial needs', need)
 
   function checkDone(task) {
-    // console.log('checking done', task, need)
+    //console.debug('checking done', task, need)
     need[task] = true
     for(var i in need) {
       // if still need something
       if (need[i] === false) {
-        // console.log('getLauncherStatus checkDone still needs', need[i])
+        //console.debug('getLauncherStatus checkDone still needs', need[i])
         return
       }
     }
-    // console.log('DONE!', need)
+    //console.debug('DONE!', need)
     // all tasks complete
     cb(running, checklist)
     doneResolver()
@@ -872,9 +887,18 @@ async function getLauncherStatus(config, lokinet, offlineMessage, cb) {
     //need.network_rpc = true
     // checkDone('network_rpc')
   }
-  // console.log('awaiting...')
+
+  if (Object.values(need).length === 0) {
+    console.log('launcher still launching processes...')
+    doneResolver()
+    // the await seems to hang it still..
+    cb(running, checklist)
+    return
+  }
+
+  //console.debug('awaiting...', need)
   await donePromise
-  // console.log('awaited!')
+  //console.debug('awaited!')
 }
 
 // only stop lokid, which should stop any launcher

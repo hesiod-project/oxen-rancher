@@ -563,7 +563,7 @@ function launcherStorageServer(config, args, cb) {
   storageServer.on('close', (code, signal) => {
     if (memoryWatcher !== null) clearInterval(memoryWatcher)
     if (watchdog !== null) clearInterval(watchdog)
-    console.log(`StorageServer process exited with code ${code}/${signal} after`, (Date.now() - storageServer.startTime)+'ms')
+    console.log(`StorageServer process exited with code ${code}/${signal} after`, (Date.now() - storageServer.startTime).toLocaleString()+'ms')
     storageServer.killed = true
     if (code == 1) {
       // these seem to be empty
@@ -731,14 +731,14 @@ function startLokinet(config, args, cb) {
       }
       return
     }
-    console.log('DAEMON: Waiting for loki key at', config.storage.lokid_key)
+    console.log('DAEMON: Waiting for oxen key at', config.storage.lokid_key)
     waitForLokiKey(config, 30 * 1000, undefined, function(haveKey) {
       if (!haveKey) {
         console.error('DAEMON: Timeout waiting for loki key.')
         // FIXME: what do?
         return
       }
-      console.log('DAEMON: Got Loki key!')
+      console.log('DAEMON: Got Oxen key!')
       if (config.network.enabled) {
         lokinet.startServiceNode(config, function () {
           startStorageServer(config, args, cb)
@@ -863,10 +863,12 @@ function startLauncherDaemon(config, interactive, entryPoint, args, debug, cb) {
         var startTime = Date.now()
         console.log('Waiting on start up confirmation...')
         function areWeRunningYet() {
+          //console.debug('areWeRunningYet')
           var diff = Date.now() - startTime
           // , process.pid
           console.log('Checking start up progress...')
           lib.getLauncherStatus(config, lokinet, 'waiting...', function(running, checklist) {
+            //console.debug('getLauncherStatus called back')
             var nodeVer = Number(process.version.match(/^v(\d+\.\d+)/)[1])
             if (nodeVer >= 10) {
               console.table(checklist)
@@ -924,6 +926,7 @@ function startLauncherDaemon(config, interactive, entryPoint, args, debug, cb) {
             //}
           })
         }
+        // 5s might not be enough
         setTimeout(areWeRunningYet, 5000)
         if (child) child.unref()
         if (config.launcher.cimode) {
@@ -1402,10 +1405,12 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
 
   if (!interactive && !config.blockchain.quiet) {
     // why is the banner held back until we connect!?
+    let logAll = false
     loki_daemon.stdout.on('data', (data) => {
       //console.log(`blockchainRAW: ${data}`)
 
       var str = data.toString()
+      if (logAll) console.log(`blockchainRAW: ${data}`)
 
       // downgrade lokid
       // E Failed to parse service node data from blob: Invalid integer or enum value during deserialization
@@ -1437,13 +1442,19 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
       }
 
       // syncingChain
+      if (str.match(/The daemon will start synchronizing with the network. This may take a long time to complete./)) {
+        console.log('blockchain sync might start')
+        syncingChain = true
+        loki_daemon.status.syncingChain = true
+        lib.savePids(config, args, loki_daemon, lokinet, storageServer)
+      }
       if (str.match(/SYNCHRONIZATION started/)) {
         console.log('blockchain sync started')
         syncingChain = true
         loki_daemon.status.syncingChain = true
         lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
-      if (str.match(/Synced/)) {
+      if (str.match(/ Synced /) && str.match(/ of total synced, estimated /)) {
         // progress update
         syncingChain = true
         loki_daemon.status.syncingChain = true
@@ -1455,7 +1466,6 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
         loki_daemon.status.syncingChain = false
         lib.savePids(config, args, loki_daemon, lokinet, storageServer)
       }
-
 
       // 2020-10-02 03:58:12.642	W Height: 243956 prev difficulty: 526886804205806, new difficulty: 526886804205807
       if (str.match(/prev difficulty/)) {
@@ -1554,7 +1564,7 @@ function launchLokid(binary_path, lokid_options, interactive, config, args, cb) 
         shuttingDownRestart: true // set something we can modify behavior on
       }
     }
-    //console.warn(`BLOCKCHAIN: loki_daemon process exited with code ${code}/${signal} after`, (Date.now() - loki_daemon.startTime)+'ms')
+    //console.warn(`BLOCKCHAIN: loki_daemon process exited with code ${code}/${signal} after`, (Date.now() - loki_daemon.startTime).toLocaleString()+'ms')
     // invalid param gives a code 1
     // code 0 means clean shutdown
     if (code === 0) {

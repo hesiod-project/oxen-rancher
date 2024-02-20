@@ -101,6 +101,12 @@ function shutdown_blockchain() {
 }
 
 function shutdown_storage() {
+  if (storageServer && storageServer.killed) {
+    if (lib.isPidRunning(storageServer.pid)) {
+      console.log('LAUNCHER: killing SS again')
+      process.kill(storageServer.pid, 'SIGKILL')
+    }
+  }
   if (storageServer && !storageServer.killed) {
     // FIXME: was killed not set?
     try {
@@ -530,6 +536,7 @@ function launcherStorageServer(config, args, cb) {
       if (data === undefined) {
         console.log('STORAGE: RPC server not responding, restarting storage server')
         shutdown_storage()
+        // what restarts this? something does
       }
     })
   }

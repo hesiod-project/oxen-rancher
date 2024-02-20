@@ -607,7 +607,9 @@ async function runStorageRPCTest(lokinet, config, cb) {
   var responded = false
   var ref = {
     abort: function () {
-      console.log('runStorageRPCTest abort: never called httpGet?')
+      // usually get this why oxend is syncing...
+      // sometimes httpGet wasn't called
+      console.log('runStorageRPCTest abort or timeout, is oxend syncing?')
     }
   }
   var storage_rpc_timer = setTimeout(function() {

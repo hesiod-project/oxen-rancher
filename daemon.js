@@ -101,7 +101,7 @@ function shutdown_blockchain() {
 }
 
 function shutdown_storage() {
-  if (storageServer && storageServer.killed)) {
+  if (storageServer && storageServer.killed) {
     if (lib.isPidRunning(storageServer.pid)) {
       console.log('LAUNCHER: killing SS again')
       process.kill(storageServer.pid, 'SIGKILL')
